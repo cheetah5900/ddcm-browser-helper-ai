@@ -3,6 +3,8 @@ import threading
 import time
 from browser_bot import BrowserBot
 import time
+from selenium.webdriver.common.by import By
+from selenium.webdriver.common.keys import Keys
 
 # --- Configuration ---
 # You can update these XPaths later
@@ -41,6 +43,10 @@ class App(ctk.CTk):
         # 3. Action: Export PNG
         self.btn_export = ctk.CTkButton(self.controls_frame, text="Action: Export PNG", command=self.action_export_png, fg_color="green")
         self.btn_export.grid(row=0, column=0, padx=20, pady=10, sticky="ew")
+
+        # 3.1 Action: Export JPG
+        self.btn_export_jpg = ctk.CTkButton(self.controls_frame, text="Action: Export JPG", command=self.action_export_jpg, fg_color="green")
+        self.btn_export_jpg.grid(row=0, column=1, padx=20, pady=10, sticky="ew")
 
         # 4. Action: Custom Action 1 (Example)
         self.btn_custom1 = ctk.CTkButton(self.controls_frame, text="Action: Custom 1", command=self.action_custom_1)
@@ -106,15 +112,14 @@ class App(ctk.CTk):
             # Use the text input which is more reliable than the slider
             ("Set Size to 1", "//input[@role='spinbutton']", "1"), 
             
-            # Step 6: Click option (Transparent background?)
-            ("Click Option", "//p[contains(text(), 'Transparent background')]"),
+            # Step 6: Ensure Transparent background is CHECKED
+            # Force click as requested (assuming it starts unchecked)
+            ("Click Transparent", "//label[.//p[contains(text(), 'Transparent background')]]"),
             
             # Step 7: Set Pages to 1-4
-            # We use the placeholder 'Select pages' which is very specific
             ("Set Pages to 1-4", "//input[@placeholder='Select pages']", "1-4"),
             
             # Step 8: Click Final Download Button
-            # It's usually a submit button with text 'Download'
             ("Final Download", "//button[@type='submit'][.//span[contains(text(), 'Download')]]")
         ]
 
@@ -128,9 +133,7 @@ class App(ctk.CTk):
                 
                 # Special handling for Page Selector: Clear first, then TAB
                 if "placeholder='Select pages'" in xpath:
-                     from selenium.webdriver.common.keys import Keys
-                     from selenium.webdriver.common.by import By
-                     
+                     # Keys and By are already imported globally
                      try:
                          # Use driver directly to find element
                          element = self.bot.driver.find_element(By.XPATH, xpath)
@@ -161,6 +164,38 @@ class App(ctk.CTk):
             time.sleep(0.5) # Small delay between steps to be safe
 
         self.log("Export PNG sequence completed.")
+
+    def action_export_jpg(self):
+        """Defines the sequence for Export JPG on Canva."""
+        self.log("Running Export JPG...")
+        
+        # 0. Ensure we are on Canva
+        if not self.bot.switch_to_tab_containing("canva.com"):
+            self.log("Error: 'canva.com' is not open in any tab.")
+            return
+
+        time.sleep(1) # Brief pause after switch
+
+        # Define steps for JPG (Initial test as requested)
+        steps = [
+            ("Click Share/Export", "//button[.//span[text()='Share']]"),
+            ("Click Download", "//button[@aria-label='Download']"),
+            ("Click File Type", "//button[@aria-label='File type']"),
+            ("Select JPG", "//li[@role='option']//div[contains(text(), 'JPG')]"),
+        ]
+
+        for step in steps:
+            name = step[0]
+            xpath = step[1]
+            self.log(f"Step: {name}")
+            
+            if not self.bot.click_element(xpath, timeout=10):
+                self.log(f"Failed at step: {name}")
+                return
+            
+            time.sleep(0.5)
+
+        self.log("Export JPG sequence (Part 1) completed.")
 
     def action_custom_1(self):
         """Defines a custom action sequence."""

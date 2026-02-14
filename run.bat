@@ -63,8 +63,11 @@ echo.
 echo Starting Application...
 if not exist "venv" (
     call venv\Scripts\activate
+    pip install -r requirements.txt
 ) else (
     call venv\Scripts\activate
+    :: Force install to ensure everything is there
+    pip install -r requirements.txt
 )
 
 python gui.py
