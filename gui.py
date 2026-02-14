@@ -7,6 +7,8 @@ from browser_bot import BrowserBot
 import time
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 
 # --- Configuration ---
 # You can update these XPaths later
@@ -44,11 +46,11 @@ class App(ctk.CTk):
         self.lbl_canva.grid(row=0, column=0, columnspan=2, pady=(10, 5), sticky="w", padx=20)
 
         # Action: Export PNG
-        self.btn_export = ctk.CTkButton(self.controls_frame, text="Export PNG (Size 1)", command=self.action_export_png, fg_color="#00C4CC")
+        self.btn_export = ctk.CTkButton(self.controls_frame, text="Export PNG (Size 1, P.1-4)", command=self.action_export_png, fg_color="#00C4CC")
         self.btn_export.grid(row=1, column=0, padx=10, pady=10, sticky="ew")
 
         # Action: Export JPG
-        self.btn_export_jpg = ctk.CTkButton(self.controls_frame, text="Export JPG (Size 0.5)", command=self.action_export_jpg, fg_color="#00C4CC")
+        self.btn_export_jpg = ctk.CTkButton(self.controls_frame, text="Export JPG (Size 0.5, P.6-9)", command=self.action_export_jpg, fg_color="#00C4CC")
         self.btn_export_jpg.grid(row=1, column=1, padx=10, pady=10, sticky="ew")
 
         # Action: Export PDF
@@ -110,11 +112,13 @@ class App(ctk.CTk):
 
         # Define steps with your specific XPaths
         steps = [
+            # Step 1: Rename Design (New!)
+            ("Rename Design to 'png'", "//input[@aria-label='Design title']", "png"),
+
             ("Click Share/Export", "//button[.//span[text()='Share']]"),
             ("Click Download", "//button[@aria-label='Download']"),
             ("Click File Type", "//button[@aria-label='File type']"),
             ("Select PNG", "//li[@role='option']//div[contains(text(), 'PNG')]"),
-            
             # Step 5: Set Size (Input Box next to Slider)
             # Use the text input which is more reliable than the slider
             ("Set Size to 1", "//input[@role='spinbutton']", "1"), 
@@ -130,47 +134,12 @@ class App(ctk.CTk):
             ("Final Download", "//button[@type='submit'][.//span[contains(text(), 'Download')]]")
         ]
 
-        for step in steps:
-            name = step[0]
-            xpath = step[1]
-            
-            if len(step) == 3: # It's an input/value task
-                value = step[2]
-                self.log(f"Step: {name}")
-                
-                # Special handling for Page Selector: Clear first, then TAB
-                if "placeholder='Select pages'" in xpath:
-                     # Keys and By are already imported globally
-                     try:
-                         # Use driver directly to find element
-                         element = self.bot.driver.find_element(By.XPATH, xpath)
-                         element.click()
-                         time.sleep(0.5)
-                         # Clear by Select All + Delete (More reliable for React inputs)
-                         element.send_keys(Keys.CONTROL + "a")
-                         element.send_keys(Keys.DELETE)
-                         time.sleep(0.5)
-                         # Type new value
-                         element.send_keys(value)
-                         time.sleep(0.5)
-                         # Press TAB
-                         element.send_keys(Keys.TAB)
-                     except Exception as e:
-                         self.log(f"Error in Page Selector step: {e}")
-                         return
-                else:
-                    if not self.bot.input_text(xpath, value, timeout=10):
-                        self.log(f"Failed at step: {name}")
-                        return
-            else: # It's a click task
-                self.log(f"Step: {name}")
-                if not self.bot.click_element(xpath, timeout=10):
-                    self.log(f"Failed at step: {name}")
-                    return
-            
-            time.sleep(0.5) # Small delay between steps to be safe
-
+        if not self._execute_steps(steps):
+             self.log("Export PNG Failed. Stopping sequence.", error=True)
+             return False
+        
         self.log("Export PNG sequence completed.")
+        return True
 
     def action_export_jpg(self):
         """Defines the sequence for Export JPG on Canva."""
@@ -179,12 +148,15 @@ class App(ctk.CTk):
         # 0. Ensure we are on Canva
         if not self.bot.switch_to_tab_containing("canva.com"):
             self.log("Error: 'canva.com' is not open in any tab.")
-            return
+            return False
 
         time.sleep(1) # Brief pause after switch
 
         # Define steps for JPG
         steps = [
+            # Step 1: Rename Design (New!)
+            ("Rename Design to 'jpg'", "//input[@aria-label='Design title']", "jpg"),
+
             ("Click Share/Export", "//button[.//span[text()='Share']]"),
             ("Click Download", "//button[@aria-label='Download']"),
             ("Click File Type", "//button[@aria-label='File type']"),
@@ -200,47 +172,12 @@ class App(ctk.CTk):
             ("Final Download", "//button[@type='submit'][.//span[contains(text(), 'Download')]]")
         ]
 
-        for step in steps:
-            name = step[0]
-            xpath = step[1]
-            
-            if len(step) == 3: # It's an input/value task
-                value = step[2]
-                self.log(f"Step: {name}")
-                
-                # Special handling for Page Selector: Clear first, then TAB
-                if "placeholder='Select pages'" in xpath:
-                     # Keys and By are already imported globally
-                     try:
-                         # Use driver directly to find element
-                         element = self.bot.driver.find_element(By.XPATH, xpath)
-                         element.click()
-                         time.sleep(0.5)
-                         # Clear by Select All + Delete
-                         element.send_keys(Keys.CONTROL + "a")
-                         element.send_keys(Keys.DELETE)
-                         time.sleep(0.5)
-                         # Type new value
-                         element.send_keys(value)
-                         time.sleep(0.5)
-                         # Press TAB
-                         element.send_keys(Keys.TAB)
-                     except Exception as e:
-                         self.log(f"Error in Page Selector step: {e}")
-                         return
-                else:
-                    if not self.bot.input_text(xpath, value, timeout=10):
-                        self.log(f"Failed at step: {name}")
-                        return
-            else: # Click task
-                self.log(f"Step: {name}")
-                if not self.bot.click_element(xpath, timeout=10):
-                    self.log(f"Failed at step: {name}")
-                    return
-            
-            time.sleep(0.5)
+        if not self._execute_steps(steps):
+             self.log("Export JPG Failed. Stopping sequence.", error=True)
+             return False
 
         self.log("Export JPG sequence completed.")
+        return True
 
     def action_export_pdf(self):
         """Defines the sequence for Export PDF (Standard) on Canva."""
@@ -249,12 +186,15 @@ class App(ctk.CTk):
         # 0. Ensure we are on Canva
         if not self.bot.switch_to_tab_containing("canva.com"):
             self.log("Error: 'canva.com' is not open in any tab.")
-            return
+            return False
 
         time.sleep(1) # Brief pause after switch
 
         # Define steps for PDF
         steps = [
+            # Step 1: Rename Design (New!)
+            ("Rename Design to 'pdf_for_downloading'", "//input[@aria-label='Design title']", "pdf_for_downloading"),
+
             ("Click Share/Export", "//button[.//span[text()='Share']]"),
             ("Click Download", "//button[@aria-label='Download']"),
             ("Click File Type", "//button[@aria-label='File type']"),
@@ -267,76 +207,37 @@ class App(ctk.CTk):
             ("Final Download", "//button[@type='submit'][.//span[contains(text(), 'Download')]]")
         ]
 
-        # Use existing step execution logic (copy-paste style for safety)
-        for step in steps:
-            name = step[0]
-            xpath = step[1]
-            
-            if len(step) == 3: # It's an input/value task
-                value = step[2]
-                self.log(f"Step: {name}")
-                
-                # Special handling for Page Selector
-                if "placeholder='Select pages'" in xpath:
-                     try:
-                         element = self.bot.driver.find_element(By.XPATH, xpath)
-                         element.click()
-                         time.sleep(0.5)
-                         element.send_keys(Keys.CONTROL + "a")
-                         element.send_keys(Keys.DELETE)
-                         time.sleep(0.5)
-                         element.send_keys(value)
-                         time.sleep(0.5)
-                         element.send_keys(Keys.TAB)
-                     except Exception as e:
-                         self.log(f"Error in Page Selector step: {e}")
-                         return
-                # Special handling for Size Input (Spinbutton) - Fix Focus/Delay issue
-                elif "role='spinbutton'" in xpath:
-                     try:
-                         element = self.bot.driver.find_element(By.XPATH, xpath)
-                         # Simple clear and set value
-                         element.send_keys(Keys.CONTROL + "a")
-                         element.send_keys(Keys.DELETE)
-                         time.sleep(0.2)
-                         
-                         element.send_keys(value)
-                         time.sleep(0.5)
-                         element.send_keys(Keys.ENTER) # Confirm value and exit focus
-                         time.sleep(1.0) # Extra wait for UI to settle before next click
-                     except Exception as e:
-                         self.log(f"Error in Size step: {e}")
-                         return
-                else:
-                    if not self.bot.input_text(xpath, value, timeout=10):
-                        self.log(f"Failed at step: {name}")
-                        return
-            else: # Click task
-                self.log(f"Step: {name}")
-                if not self.bot.click_element(xpath, timeout=10):
-                    self.log(f"Failed at step: {name}")
-                    return
-            
-            time.sleep(0.5)
+        if not self._execute_steps(steps):
+             self.log("Export PDF Failed. Stopping sequence.", error=True)
+             return False
         
         self.log("Export PDF sequence completed.")
+        return True
 
     def action_export_all(self):
         """Runs PNG, JPG, and PDF export sequences."""
         self.log("Starting ALL Exports (PNG + JPG + PDF)...")
         
         # Run PNG Export
-        self.action_export_png()
-        self.log("Waiting for PNG cleanup...")
-        time.sleep(3) 
+        if not self.action_export_png():
+             self.log("ABORTING ALL EXPORTS due to PNG failure.", error=True)
+             return
+
+        self.log("Waiting 8s for PNG cleanup...")
+        time.sleep(8) 
         
         # Run JPG Export
-        self.action_export_jpg()
-        self.log("Waiting for JPG cleanup...")
-        time.sleep(3)
+        if not self.action_export_jpg():
+             self.log("ABORTING ALL EXPORTS due to JPG failure.", error=True)
+             return
+
+        self.log("Waiting 8s for JPG cleanup...")
+        time.sleep(8)
         
         # Run PDF Export
-        self.action_export_pdf()
+        if not self.action_export_pdf():
+             self.log("ABORTING ALL EXPORTS due to PDF failure.", error=True)
+             return
         
         self.log("ALL Exports Completed Successfully!")
 
@@ -381,6 +282,90 @@ class App(ctk.CTk):
 
         except Exception as e:
              self.log(f"Critical Error: {e}", error=True)
+
+
+
+    def _execute_steps(self, steps):
+        """
+        Helper to execute a list of steps with special handling.
+        Returns: True if all steps succeeded, False if any failed.
+        """
+        for step in steps:
+            name = step[0]
+            xpath = step[1]
+            
+            if len(step) == 3: # It's an input/value task
+                value = step[2]
+                self.log(f"Step: {name}")
+                
+                try:
+                    # Special handling for Page Selector
+                    if "placeholder='Select pages'" in xpath:
+                         element = self.bot.driver.find_element(By.XPATH, xpath)
+                         element.click()
+                         time.sleep(0.5)
+                         element.send_keys(Keys.CONTROL + "a")
+                         element.send_keys(Keys.DELETE)
+                         time.sleep(0.5)
+                         element.send_keys(value)
+                         time.sleep(0.5)
+                         element.send_keys(Keys.TAB)
+                    
+                    # Special handling for Size Input (Spinbutton)
+                    elif "role='spinbutton'" in xpath:
+                         element = self.bot.driver.find_element(By.XPATH, xpath)
+                         element.send_keys(Keys.CONTROL + "a")
+                         element.send_keys(Keys.DELETE)
+                         time.sleep(0.2)
+                         element.send_keys(value)
+                         time.sleep(0.5)
+                         element.send_keys(Keys.ENTER) # Confirm value
+                         time.sleep(1.0) # Extra wait for UI
+                         
+                    # Special handling for Rename (Design title) - WITH 20s TIMEOUT
+                    elif "aria-label='Design title'" in xpath:
+                         try:
+                             # Wait up to 20 seconds for the rename box to be present and interactable
+                             element = WebDriverWait(self.bot.driver, 20).until(
+                                 EC.element_to_be_clickable((By.XPATH, xpath))
+                             )
+                             # Click TWICE to ensure focus (bypass popups)
+                             element.click()
+                             time.sleep(0.5)
+                             element.click()
+                             
+                             # Clear existing name
+                             element.send_keys(Keys.CONTROL + "a")
+                             element.send_keys(Keys.DELETE)
+                             time.sleep(0.2)
+                             # Set new name
+                             element.send_keys(value)
+                             time.sleep(0.5)
+                             # Press Enter
+                             element.send_keys(Keys.ENTER)
+                             time.sleep(1.0) # Wait for save
+                         except Exception as e:
+                             self.log(f"Error: Could not find Rename Button within 20s. Stopping. ({e})", error=True)
+                             return False
+
+                    else: # Normal input
+                        if not self.bot.input_text(xpath, value, timeout=10):
+                            self.log(f"Failed at step: {name}")
+                            return False
+                            
+                except Exception as e:
+                    self.log(f"Error in step '{name}': {e}", error=True)
+                    return False
+
+            else: # Click task
+                self.log(f"Step: {name}")
+                if not self.bot.click_element(xpath, timeout=10):
+                    self.log(f"Failed at step: {name}")
+                    return False
+            
+            time.sleep(0.5)
+            
+        return True
 
     def debug_check_tabs(self):
         """Prints all open tabs to debug."""
