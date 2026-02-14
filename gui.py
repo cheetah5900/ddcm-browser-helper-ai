@@ -69,9 +69,39 @@ class App(ctk.CTk):
         self.btn_unzip = ctk.CTkButton(self.controls_frame, text="Unzip All Zips", command=self.action_unzip_downloads, fg_color="#FFA500") # Orange
         self.btn_unzip.grid(row=4, column=0, padx=10, pady=10, sticky="ew")
 
+        # --- Etsy and DDMC Section ---
+        self.lbl_etsy = ctk.CTkLabel(self.controls_frame, text="Etsy and DDMC", font=("Arial", 14, "bold"))
+        self.lbl_etsy.grid(row=5, column=0, columnspan=2, pady=(15, 5), sticky="w", padx=20)
+
+        # --- Etsy Data Inputs ---
+        self.lbl_etsy_data = ctk.CTkLabel(self.controls_frame, text="Etsy Listing Details", font=("Arial", 12, "italic"))
+        self.lbl_etsy_data.grid(row=6, column=0, columnspan=2, pady=(5, 0), sticky="w", padx=20)
+
+        # Primary Color & Secondary Color
+        self.entry_primary = ctk.CTkEntry(self.controls_frame, placeholder_text="Primary Color")
+        self.entry_primary.insert(0, "Red")
+        self.entry_primary.grid(row=7, column=0, padx=10, pady=5, sticky="ew")
+        
+        self.entry_secondary = ctk.CTkEntry(self.controls_frame, placeholder_text="Secondary Color")
+        self.entry_secondary.insert(0, "Gray")
+        self.entry_secondary.grid(row=7, column=1, padx=10, pady=5, sticky="ew")
+
+        # Price & Shop Section
+        self.entry_price = ctk.CTkEntry(self.controls_frame, placeholder_text="Price (e.g. 5.99)")
+        self.entry_price.insert(0, "2")
+        self.entry_price.grid(row=8, column=0, padx=10, pady=5, sticky="ew")
+        
+        self.entry_section = ctk.CTkEntry(self.controls_frame, placeholder_text="Shop Section Name")
+        self.entry_section.insert(0, "Chinese New Year")
+        self.entry_section.grid(row=8, column=1, padx=10, pady=5, sticky="ew")
+
+        # Action: Create Etsy Listing
+        self.btn_etsy = ctk.CTkButton(self.controls_frame, text="Create Etsy Listing", command=self.action_etsy_listing, fg_color="#F1641E") # Etsy Orange
+        self.btn_etsy.grid(row=9, column=0, columnspan=2, padx=10, pady=10, sticky="ew")
+
         # --- Status Section ---
         self.status_label = ctk.CTkLabel(self, text="Connecting...", text_color="orange")
-        self.status_label.grid(row=2, column=0, pady=20)
+        self.status_label.grid(row=10, column=0, pady=10)
         
         # Auto-start connection
         self.start_browser_thread()
@@ -241,6 +271,223 @@ class App(ctk.CTk):
         
         self.log("ALL Exports Completed Successfully!")
 
+    def action_etsy_listing(self):
+        """Extracts data from DDCM and populates the Etsy listing creator with user inputs."""
+        self.log("Starting Etsy Listing process...")
+        
+        # 0. Get user inputs from GUI and validate
+        user_primary = self.entry_primary.get().strip()
+        user_secondary = self.entry_secondary.get().strip()
+        user_price = self.entry_price.get().strip()
+        user_section = self.entry_section.get().strip()
+
+        if not all([user_primary, user_secondary, user_price, user_section]):
+            self.log("Error: All 4 fields (Colors, Price, Section) must be filled!", error=True)
+            return
+
+        # 1. Extract from DDCM
+        if not self.bot.switch_to_tab_containing("ddcm.litarandfriends.uk"):
+            self.bot.driver.execute_script("window.open('https://ddcm.litarandfriends.uk', '_blank');")
+            time.sleep(2)
+            self.bot.switch_to_tab_containing("ddcm.litarandfriends.uk")
+
+        extracted_data = {}
+        ddcm_fields = [
+            ("name", "/html/body/main/div[3]/div/div[2]/div[2]/div/div/div"),
+            ("tag", "/html/body/main/div[3]/div/div[2]/div[10]/div/div/div"),
+            ("material", "/html/body/main/div[3]/div/div[2]/div[11]/div/div/div/div"),
+            ("description", "/html/body/main/div[3]/div/div[2]/div[12]/div/div/div/div")
+        ]
+
+        for field_name, xpath in ddcm_fields:
+            try:
+                element = WebDriverWait(self.bot.driver, 10).until(
+                    EC.presence_of_element_located((By.XPATH, xpath))
+                )
+                # Auto-scroll to element before extracting
+                self.bot.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", element)
+                time.sleep(0.2)
+                
+                # Filter out any weird characters if needed
+                text = element.text.strip()
+                extracted_data[field_name] = text
+                self.log(f"Extracted {field_name}")
+            except Exception:
+                self.log(f"Error: Could not find '{field_name}' on DDCM within 10s.", error=True)
+                return
+
+        self.log("Extracted all data from DDCM.")
+
+        # 2. Go to Etsy (Strict Check)
+        etsy_create_url = "https://www.etsy.com/your/shops/me/listing-editor/create"
+        self.log("Checking for Etsy Create Listing page...")
+        
+        found_etsy_tab = False
+        # Iterate through all tabs to find the exact creator URL
+        for handle in self.bot.driver.window_handles:
+            self.bot.driver.switch_to.window(handle)
+            # Check if current URL contains the target 'create' path
+            if "etsy.com/your/shops/me/listing-editor/create" in self.bot.driver.current_url:
+                found_etsy_tab = True
+                self.log("Found Etsy Create tab.")
+                break
+        
+        if not found_etsy_tab:
+            self.log("Etsy Create page not found. Opening new tab...")
+            self.bot.driver.execute_script(f"window.open('{etsy_create_url}', '_blank');")
+            time.sleep(5) # Give more time for Etsy to load
+            self.bot.driver.switch_to.window(self.bot.driver.window_handles[-1])
+            # Final check/wait to ensure it's loaded
+            WebDriverWait(self.bot.driver, 10).until(lambda d: "etsy.com" in d.current_url)
+        
+        time.sleep(2)
+
+        # 3. Etsy Setup Steps (Radio buttons, Category, etc.)
+        setup_steps = [
+            ("Select Category: Clip Art", "//div[contains(@class, 'le-category-action-item') and .//h2[contains(text(), 'Clip Art')]]"),
+            ("Click Continue (1)", "//button[contains(@class, 'wt-btn--primary') and text()='Continue']"),
+            ("Select Digital Download", "//input[@name='listing_type_options_group' and @value='download']"),
+            ("Select 'I did'", "//label[contains(text(), 'I did')]"),
+            ("Select 'A supply or tool'", "//label[contains(text(), 'A supply or tool to make things')]"),
+            ("Select '2020-2026'", "//select[@id='when-made-select']", "2020_2026"),
+            ("Select 'With an AI generator'", "//input[@value='ai_gen']"),
+            ("Click Continue (2)", "//button[contains(@class, 'wt-btn--primary') and text()='Continue']")
+        ]
+
+        for name, xpath, *value in setup_steps:
+            try:
+                element = WebDriverWait(self.bot.driver, 10).until(
+                    EC.presence_of_element_located((By.XPATH, xpath))
+                )
+                # Auto-scroll to element
+                self.bot.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", element)
+                time.sleep(0.3)
+
+                if value: # Dropdown select
+                    from selenium.webdriver.support.ui import Select
+                    Select(element).select_by_value(value[0])
+                else: # Click
+                    try: element.click()
+                    except: self.bot.driver.execute_script("arguments[0].click();", element)
+                time.sleep(0.5)
+            except Exception:
+                self.log(f"Error: Etsy Setup '{name}' failed within 10s.", error=True)
+                return
+
+        self.log("Etsy Setup successful. Waiting 1s to settle...")
+        time.sleep(1)
+
+        # 4. Etsy Content Filling (Pasting Variables)
+        content_steps = [
+            # 1. Title
+            ("Paste Title", "//textarea[@id='listing-title-input']", extracted_data.get('name', '')),
+            # 2. Description
+            ("Paste Description", "//textarea[@id='listing-description-textarea' or @name='description']", extracted_data.get('description', '')),
+            # 3. Price
+            ("Paste Price", "//input[@id='listing-price-input']", user_price),
+            # 4. Quantity
+            ("Paste Quantity", "//input[@id='listing-quantity-input']", "999"),
+            
+            # 5. Scrapbooking (Craft type)
+            ("Click Topic Search", "//input[@placeholder='Type to search…' and contains(@aria-describedby, 'attribute-0')]"),
+            ("Check Scrapbooking Box", "//label[contains(text(), 'Scrapbooking')]"),
+            ("Press ESC", "SPECIAL_ESC"), # Close scrapbooking dropdown
+            
+            # 6. Primary color (Verified Absolute XPath)
+            ("Paste Primary Color", "/html/body/div[3]/div/div[1]/main/div/div/form/div/div[3]/div/div[4]/div/div/div[3]/div[3]/div/div/div/div/div[1]/input", user_primary),
+            ("Select Primary Color", "//button[@role='menuitemradio']//p[contains(text(), '" + user_primary + "')]"),
+            
+            # 7. Secondary color
+            ("Paste Secondary Color", "/html/body/div[3]/div/div[1]/main/div/div/form/div/div[3]/div/div[4]/div/div/div[3]/div[4]/div/div/div/div/div[1]/input", user_secondary),
+            ("Select Secondary Color", "//button[@role='menuitemradio']//p[contains(text(), '" + user_secondary + "')]"),
+            
+            # 8. Tag
+            ("Paste Tag", "//input[@id='listing-tags-input']", extracted_data.get('tag', '')),
+            ("Click Add Tag", "//button[@id='listing-tags-button']"),
+            
+            # 9. Material
+            ("Paste Material", "//input[@id='listing-materials-input']", extracted_data.get('material', '')),
+            ("Click Add Material", "//button[@id='listing-materials-button']"),
+            
+            # 10. Shop Section
+            ("Select Shop Section", "//select[@id='shop-section-select']", user_section)
+        ]
+
+        for step in content_steps:
+            name, xpath = step[0], step[1]
+            try:
+                # Handle special key actions
+                if xpath == "SPECIAL_ESC":
+                    self.log(f"Etsy Action: Force Hide Dropdown")
+                    self.bot.driver.execute_script("""
+                        var dropdowns = document.querySelectorAll('.wt-menu__body');
+                        dropdowns.forEach(function(d) {
+                            d.style.display = 'none';
+                            d.setAttribute('aria-hidden', 'true');
+                        });
+                    """)
+                    time.sleep(0.5)
+                    continue
+
+                # Use element_to_be_clickable for input fields
+                element = WebDriverWait(self.bot.driver, 10).until(
+                    EC.presence_of_element_located((By.XPATH, xpath))
+                )
+                
+                # Strict scroll to ensure visibility
+                self.bot.driver.execute_script("arguments[0].scrollIntoView({block: 'center', inline: 'nearest'});", element)
+                time.sleep(0.5)
+
+                self.log(f"Etsy Filling: {name}")
+                
+                # If there's a third value, it's text to input or dropdown value
+                if len(step) == 3:
+                    text_value = step[2]
+                    if element.tag_name == "select":
+                        from selenium.webdriver.support.ui import Select
+                        s = Select(element)
+                        try: s.select_by_visible_text(text_value)
+                        except: s.select_by_value(text_value)
+                    else:
+                        try:
+                            element.click()
+                        except:
+                            self.bot.driver.execute_script("arguments[0].click();", element)
+                        
+                        # Special handling for Craft type search / Colors which need 'typing' for the dropdown to appear
+                        # OR if it's a field that doesn't like JS injection for focus
+                        if "placeholder='Type to search…'" in xpath:
+                            element.send_keys(Keys.CONTROL + "a")
+                            element.send_keys(Keys.DELETE)
+                            element.send_keys(text_value)
+                        else:
+                            # USE JAVASCRIPT TO SET VALUE (To support Emojis and avoid BMP Error)
+                            self.bot.driver.execute_script("""
+                                var el = arguments[0];
+                                var val = arguments[1];
+                                el.value = val;
+                                // Trigger React/Modern Framework events
+                                el.dispatchEvent(new Event('input', { bubbles: true }));
+                                el.dispatchEvent(new Event('change', { bubbles: true }));
+                            """, element, text_value)
+                        
+                        time.sleep(0.5)
+                else: # Just a click (Native click for better focus)
+                    try: 
+                        # For checkboxes/labels, native click is better for focus
+                        element.click()
+                    except: 
+                        self.bot.driver.execute_script("arguments[0].click();", element)
+                
+                time.sleep(0.5)
+            except Exception as e:
+                # Log the actual error for debugging
+                error_msg = str(e).split('\n')[0] # Get first line of error
+                self.log(f"Error: Etsy Content '{name}' fail. ({error_msg})", error=True)
+                return
+
+        self.log("Etsy Listing populated successfully!")
+
     def action_unzip_downloads(self):
         """Unzips all .zip files in the Downloads folder."""
         self.log("Starting Unzip process in Downloads folder...")
@@ -359,7 +606,18 @@ class App(ctk.CTk):
 
             else: # Click task
                 self.log(f"Step: {name}")
-                if not self.bot.click_element(xpath, timeout=10):
+                # Wait + Scroll for Canva clicks too
+                try:
+                    element = WebDriverWait(self.bot.driver, 10).until(
+                        EC.presence_of_element_located((By.XPATH, xpath))
+                    )
+                    self.bot.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", element)
+                    time.sleep(0.3)
+                    
+                    if not self.bot.click_element(xpath, timeout=2):
+                         # Fallback to JS click if normal click fails
+                         self.bot.driver.execute_script("arguments[0].click();", element)
+                except:
                     self.log(f"Failed at step: {name}")
                     return False
             
