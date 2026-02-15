@@ -21,7 +21,7 @@ class App(ctk.CTk):
         super().__init__()
 
         self.title("Browser Controller")
-        self.geometry("400x600") # Increased height for new buttons
+        self.geometry("1200x600") # Widen window 3x
         
         # Initialize the bot
         self.bot = BrowserBot()
@@ -35,76 +35,371 @@ class App(ctk.CTk):
         self.label = ctk.CTkLabel(self, text="Browser Controller", font=("Arial", 20, "bold"))
         self.label.grid(row=0, column=0, padx=20, pady=20)
 
-        # Controls Frame
+        # Controls Frame (Main Container)
         self.controls_frame = ctk.CTkFrame(self)
         self.controls_frame.grid(row=1, column=0, padx=20, pady=20, sticky="nsew")
-        self.controls_frame.grid_columnconfigure(0, weight=1)
-        self.controls_frame.grid_columnconfigure(1, weight=1) # 2 Columns
-
-        # --- Canva Automation Section ---
-        self.lbl_canva = ctk.CTkLabel(self.controls_frame, text="Canva Automation", font=("Arial", 14, "bold"))
-        self.lbl_canva.grid(row=0, column=0, columnspan=2, pady=(10, 5), sticky="w", padx=20)
-
-        # Action: Export PNG
-        self.btn_export = ctk.CTkButton(self.controls_frame, text="Export PNG (Size 1, P.1-4)", command=self.action_export_png, fg_color="#00C4CC")
-        self.btn_export.grid(row=1, column=0, padx=10, pady=10, sticky="ew")
-
-        # Action: Export JPG
-        self.btn_export_jpg = ctk.CTkButton(self.controls_frame, text="Export JPG (Size 0.5, P.6-9)", command=self.action_export_jpg, fg_color="#00C4CC")
-        self.btn_export_jpg.grid(row=1, column=1, padx=10, pady=10, sticky="ew")
-
-        # Action: Export PDF
-        self.btn_export_pdf = ctk.CTkButton(self.controls_frame, text="Export PDF (Page 10)", command=self.action_export_pdf, fg_color="#E04F5F") # Reddish
-        self.btn_export_pdf.grid(row=2, column=0, padx=10, pady=10, sticky="ew")
-
-        # Action: Export ALL
-        self.btn_export_all = ctk.CTkButton(self.controls_frame, text="Export ALL", command=self.action_export_all, fg_color="#005F99") # Dark Blue
-        self.btn_export_all.grid(row=2, column=1, padx=10, pady=10, sticky="ew")
         
-        # --- File Tools Section ---
-        self.lbl_files = ctk.CTkLabel(self.controls_frame, text="File Tools", font=("Arial", 14, "bold"))
-        self.lbl_files.grid(row=3, column=0, columnspan=2, pady=(15, 5), sticky="w", padx=20)
+        # Configure columns for horizontal layout (4 main columns)
+        self.controls_frame.grid_columnconfigure(0, weight=1) # Canva
+        self.controls_frame.grid_columnconfigure(1, weight=1) # File Tools
+        self.controls_frame.grid_columnconfigure(2, weight=1) # Etsy
+        self.controls_frame.grid_columnconfigure(3, weight=1) # Gemini
 
-        # Action: Unzip All
-        self.btn_unzip = ctk.CTkButton(self.controls_frame, text="Unzip All Zips", command=self.action_unzip_downloads, fg_color="#FFA500") # Orange
-        self.btn_unzip.grid(row=4, column=0, padx=10, pady=10, sticky="ew")
+        # === COLUMN 0: Canva Automation ===
+        self.frame_canva = ctk.CTkFrame(self.controls_frame, fg_color="transparent")
+        self.frame_canva.grid(row=0, column=0, padx=10, pady=10, sticky="nsew")
+        self.frame_canva.grid_columnconfigure(0, weight=1)
 
-        # --- Etsy and DDMC Section ---
-        self.lbl_etsy = ctk.CTkLabel(self.controls_frame, text="Etsy and DDMC", font=("Arial", 14, "bold"))
-        self.lbl_etsy.grid(row=5, column=0, columnspan=2, pady=(15, 5), sticky="w", padx=20)
+        self.lbl_canva = ctk.CTkLabel(self.frame_canva, text="Canva Automation", font=("Arial", 16, "bold"))
+        self.lbl_canva.grid(row=0, column=0, pady=(10, 15), sticky="w")
 
-        # --- Etsy Data Inputs ---
-        self.lbl_etsy_data = ctk.CTkLabel(self.controls_frame, text="Etsy Listing Details", font=("Arial", 12, "italic"))
-        self.lbl_etsy_data.grid(row=6, column=0, columnspan=2, pady=(5, 0), sticky="w", padx=20)
+        # Shorter buttons (width=150 is example, adjust as needed)
+        
+        # PNG Config
+        self.entry_png_pages = ctk.CTkEntry(self.frame_canva, placeholder_text="Pages (e.g. 1-4)", width=140)
+        self.entry_png_pages.insert(0, "1-4")
+        self.entry_png_pages.grid(row=1, column=0, pady=(10, 0), sticky="w")
 
-        # Primary Color & Secondary Color
-        self.entry_primary = ctk.CTkEntry(self.controls_frame, placeholder_text="Primary Color")
+        self.btn_export = ctk.CTkButton(self.frame_canva, text="Export PNG", width=140, command=self.action_export_png, fg_color="#00C4CC")
+        self.btn_export.grid(row=2, column=0, pady=(5, 10), sticky="w")
+
+        # JPG Config
+        self.entry_jpg_pages = ctk.CTkEntry(self.frame_canva, placeholder_text="Pages (e.g. 6-9)", width=140)
+        self.entry_jpg_pages.insert(0, "6-9")
+        self.entry_jpg_pages.grid(row=3, column=0, pady=(10, 0), sticky="w")
+
+        self.btn_export_jpg = ctk.CTkButton(self.frame_canva, text="Export JPG", width=140, command=self.action_export_jpg, fg_color="#00C4CC")
+        self.btn_export_jpg.grid(row=4, column=0, pady=(5, 10), sticky="w")
+        
+        # PDF Config
+        self.entry_pdf_pages = ctk.CTkEntry(self.frame_canva, placeholder_text="Pages (e.g. 10)", width=140)
+        self.entry_pdf_pages.insert(0, "10")
+        self.entry_pdf_pages.grid(row=5, column=0, pady=(10, 0), sticky="w")
+
+        # Adjust rows for subsequent buttons
+        self.btn_export_pdf = ctk.CTkButton(self.frame_canva, text="Export PDF", width=140, command=self.action_export_pdf, fg_color="#E04F5F")
+        self.btn_export_pdf.grid(row=6, column=0, pady=(5, 10), sticky="w")
+
+        self.btn_export_all = ctk.CTkButton(self.frame_canva, text="Export ALL", width=140, command=self.action_export_all, fg_color="#005F99")
+        self.btn_export_all.grid(row=7, column=0, pady=10, sticky="w")
+
+
+        # === COLUMN 1: File Tools ===
+        self.frame_files = ctk.CTkFrame(self.controls_frame, fg_color="transparent")
+        self.frame_files.grid(row=0, column=1, padx=10, pady=10, sticky="nsw")
+        self.frame_files.grid_columnconfigure(0, weight=1)
+
+        self.lbl_files = ctk.CTkLabel(self.frame_files, text="File Tools", font=("Arial", 16, "bold"))
+        self.lbl_files.grid(row=0, column=0, pady=(10, 15), sticky="w")
+
+        self.btn_unzip = ctk.CTkButton(self.frame_files, text="Unzip Downloads", width=140, command=self.action_unzip_downloads, fg_color="#FFA500")
+        self.btn_unzip.grid(row=1, column=0, pady=10, sticky="w")
+        
+
+        # === COLUMN 2: Etsy and DDMC ===
+        self.frame_etsy = ctk.CTkFrame(self.controls_frame, fg_color="transparent")
+        self.frame_etsy.grid(row=0, column=2, padx=10, pady=10, sticky="nsew")
+        self.frame_etsy.grid_columnconfigure(0, weight=1)
+
+        self.lbl_etsy = ctk.CTkLabel(self.frame_etsy, text="Etsy and DDMC", font=("Arial", 16, "bold"))
+        self.lbl_etsy.grid(row=0, column=0, columnspan=2, pady=(10, 15), sticky="w")
+
+        self.entry_primary = ctk.CTkEntry(self.frame_etsy, placeholder_text="Primary Color", width=100)
         self.entry_primary.insert(0, "Red")
-        self.entry_primary.grid(row=7, column=0, padx=10, pady=5, sticky="ew")
+        self.entry_primary.grid(row=1, column=0, padx=5, pady=10, sticky="w")
         
-        self.entry_secondary = ctk.CTkEntry(self.controls_frame, placeholder_text="Secondary Color")
+        self.entry_secondary = ctk.CTkEntry(self.frame_etsy, placeholder_text="Secondary Color", width=100)
         self.entry_secondary.insert(0, "Gray")
-        self.entry_secondary.grid(row=7, column=1, padx=10, pady=5, sticky="ew")
+        self.entry_secondary.grid(row=2, column=0, padx=5, pady=10, sticky="w")
 
-        # Price & Shop Section
-        self.entry_price = ctk.CTkEntry(self.controls_frame, placeholder_text="Price (e.g. 5.99)")
-        self.entry_price.insert(0, "2")
-        self.entry_price.grid(row=8, column=0, padx=10, pady=5, sticky="ew")
-        
-        self.entry_section = ctk.CTkEntry(self.controls_frame, placeholder_text="Shop Section Name")
-        self.entry_section.insert(0, "Chinese New Year")
-        self.entry_section.grid(row=8, column=1, padx=10, pady=5, sticky="ew")
+        self.btn_etsy = ctk.CTkButton(self.frame_etsy, text="Create Listing", width=140, command=self.action_etsy_listing, fg_color="#F1641E")
+        self.btn_etsy.grid(row=3, column=0, pady=20, sticky="w")
 
-        # Action: Create Etsy Listing
-        self.btn_etsy = ctk.CTkButton(self.controls_frame, text="Create Etsy Listing", command=self.action_etsy_listing, fg_color="#F1641E") # Etsy Orange
-        self.btn_etsy.grid(row=9, column=0, columnspan=2, padx=10, pady=10, sticky="ew")
+
+        # === COLUMN 3: Gemini Automation (Moved Here) ===
+        self.frame_gemini = ctk.CTkFrame(self.controls_frame, fg_color="transparent")
+        self.frame_gemini.grid(row=0, column=3, padx=10, pady=10, sticky="nsew")
+        self.frame_gemini.grid_columnconfigure(0, weight=1)
+
+        self.lbl_gemini = ctk.CTkLabel(self.frame_gemini, text="Gemini Automation", font=("Arial", 16, "bold"))
+        self.lbl_gemini.grid(row=0, column=0, pady=(10, 15), sticky="w")
+
+        self.entry_gemini_count = ctk.CTkEntry(self.frame_gemini, placeholder_text="Count", width=80)
+        self.entry_gemini_count.insert(0, "5")
+        self.entry_gemini_count.grid(row=1, column=0, pady=10, sticky="w")
+
+        self.btn_gemini = ctk.CTkButton(self.frame_gemini, text="Gen Characters", width=120, command=self.action_gemini_gen, fg_color="#8E44AD")
+        self.btn_gemini.grid(row=1, column=0, pady=5, sticky="w")
+
+        self.btn_gemini_elements = ctk.CTkButton(self.frame_gemini, text="Gen Elements", width=120, command=self.action_gemini_elements, fg_color="#8E44AD")
+        self.btn_gemini_elements.grid(row=2, column=0, pady=5, sticky="w")
+
+        self.btn_download_imgs = ctk.CTkButton(self.frame_gemini, text="Download images", width=120, command=self.action_download_images, fg_color="#2E86C1") # Blue
+        self.btn_download_imgs.grid(row=3, column=0, pady=5, sticky="w")
+
 
         # --- Status Section ---
         self.status_label = ctk.CTkLabel(self, text="Connecting...", text_color="orange")
-        self.status_label.grid(row=10, column=0, pady=10)
+        self.status_label.grid(row=2, column=0, pady=10)
         
         # Auto-start connection
         self.start_browser_thread()
+
+    def action_gemini_gen(self):
+        """Starts the Gemini generation process for characters."""
+        threading.Thread(target=self._run_gemini_gen, args=("characters",)).start()
+
+    def action_gemini_elements(self):
+        """Starts the Gemini generation process for elements."""
+        threading.Thread(target=self._run_gemini_gen, args=("elements",)).start()
+
+    def action_download_images(self):
+        """Starts the Gemini image download process."""
+        threading.Thread(target=self._run_download_images).start()
+
+    def _run_download_images(self):
+        try:
+            self.log("Starting Image Download...")
+            
+            # 1. Switch to Gemini
+            gemini_url = "gemini.google.com/app"
+            found_gemini = False
+            for handle in self.bot.driver.window_handles:
+                self.bot.driver.switch_to.window(handle)
+                if gemini_url in self.bot.driver.current_url:
+                    found_gemini = True
+                    break
+            
+            if not found_gemini:
+                self.log("Error: Gemini tab not found!", error=True)
+                return
+
+            time.sleep(1)
+
+            # 2. Scroll to TOP (to handle lazy load / find all)
+            self.log("Scrolling to TOP...")
+            # Try scrolling the main window and common scrollers
+            self.bot.driver.execute_script("window.scrollTo(0, 0);")
+            
+            # Sometimes the scroll is on a specific element. Try widely used classes.
+            scrollers = self.bot.driver.find_elements(By.CSS_SELECTOR, ".infinite-scroller, .conversation-container, main")
+            for s in scrollers:
+                self.bot.driver.execute_script("arguments[0].scrollTop = 0;", s)
+            
+            time.sleep(2) # Wait for load
+
+            # 3. Find Download Buttons
+            # Selector: download-generated-image-button > button
+            # Need to find ALL of them.
+            
+            # Since Gemini lazy loads, we might need to scroll DOWN slowly to find them all?
+            # User said "scroll to top" - assuming old items are at top and we need to start there.
+            # But if we click, we need to ensure they are in view.
+
+            # Let's find all currently visible/loaded buttons first.
+            buttons = self.bot.driver.find_elements(By.CSS_SELECTOR, "download-generated-image-button > button")
+            
+            if not buttons:
+                self.log("No download buttons found initially. Trying to scroll down a bit...", error=False)
+                # Maybe scroll specific amount?
+                self.bot.driver.execute_script("window.scrollTo(0, 1000);")
+                time.sleep(1)
+                buttons = self.bot.driver.find_elements(By.CSS_SELECTOR, "download-generated-image-button > button")
+
+            if not buttons:
+                self.log("Error: No download buttons found.", error=True)
+                return
+
+            self.log(f"Found {len(buttons)} images to download.")
+
+            count = len(buttons)
+            for i, btn in enumerate(buttons):
+                self.log(f"Downloading image {i+1}/{count}...")
+                
+                try:
+                    # Scroll into view
+                    self.bot.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", btn)
+                    time.sleep(0.5)
+
+                    # Click
+                    try:
+                        btn.click()
+                    except:
+                        self.bot.driver.execute_script("arguments[0].click();", btn)
+                    
+                    # Smart Wait: Wait until the NEXT button is clickable (or current one if checking state)
+                    # The user said "Wait for status to return to normal".
+                    # Usually when downloading, the button might be disabled or loading.
+                    # We can check if the button itself is re-enabled/clickable.
+                    
+                    try:
+                        # Wait up to 15 seconds for THIS button to be interactable again
+                        # Or perhaps just a small delay + check
+                        time.sleep(1) 
+                        WebDriverWait(self.bot.driver, 15).until(
+                             EC.element_to_be_clickable(btn)
+                        )
+                    except:
+                        self.log(f"Warning: Button {i+1} didn't return to clickable state quickly.", error=False) 
+
+                except Exception as e:
+                    self.log(f"Error clicking btn {i}: {e}", error=True)
+
+            self.log("Download sequence finished.")
+
+        except Exception as e:
+             self.log(f"Error: {e}", error=True)
+
+    def _run_gemini_gen(self, mode="characters"):
+        try:
+            self.log(f"Starting Gemini Gen ({mode})...")
+
+            # 1. Switch to DDCM
+            ddcm_url = "ddcm.litarandfriends.uk"
+            found_ddcm = False
+            for handle in self.bot.driver.window_handles:
+                self.bot.driver.switch_to.window(handle)
+                if ddcm_url in self.bot.driver.current_url:
+                    found_ddcm = True
+                    break
+            
+            if not found_ddcm:
+                self.log("Error: DDCM tab not found! Please open it.", error=True)
+                return
+
+            time.sleep(1)
+
+            # 2. Select Containers based on Mode
+            containers = []
+            if mode == "characters":
+                containers = [
+                    ("Set 1", "body > main > div.modal-overlay > div > div:nth-child(2) > div:nth-child(13) > div > div > div > div:nth-child(1) > div:nth-child(2)"),
+                    ("Set 2", "body > main > div.modal-overlay > div > div:nth-child(2) > div:nth-child(13) > div > div > div > div:nth-child(2) > div:nth-child(2)")
+                ]
+            elif mode == "elements":
+                containers = [
+                    ("Elements", "body > main > div.modal-overlay > div > div:nth-child(2) > div:nth-child(13) > div > div > div > div:nth-child(3) > div:nth-child(2)")
+                ]
+            else:
+                self.log("Unknown mode.", error=True)
+                return
+
+            all_prompts = []
+            results = []
+
+            for name, selector in containers:
+                self.log(f"Scanning {name}...")
+                try:
+                    # Find container
+                    container = WebDriverWait(self.bot.driver, 5).until(
+                        EC.presence_of_element_located((By.CSS_SELECTOR, selector))
+                    )
+                    
+                    # Scroll container into view
+                    self.bot.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", container)
+                    time.sleep(0.5)
+
+                    # Find buttons
+                    buttons = container.find_elements(By.TAG_NAME, "button")
+                    if not buttons:
+                         buttons = container.find_elements(By.XPATH, ".//button")
+                    
+                    count = len(buttons)
+                    results.append(f"{name}: {count}")
+                    
+                    if count > 0:
+                        for i, btn in enumerate(buttons):
+                            try:
+                                # Scroll to button (fast)
+                                self.bot.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", btn)
+                                
+                                # Click
+                                try: btn.click()
+                                except: self.bot.driver.execute_script("arguments[0].click();", btn)
+                                time.sleep(0.1)
+
+                                # Get text
+                                try:
+                                    text = self.clipboard_get()
+                                    if text: all_prompts.append(text)
+                                except: pass
+                            except Exception as e:
+                                print(f"Error btn {i}: {e}")
+                except Exception as e:
+                    self.log(f"Error {name}: {e}", error=True)
+                    results.append(f"{name}: Error")
+
+            self.log(f"Collected {len(all_prompts)} prompts. Switching to Gemini...")
+            
+            if not all_prompts:
+                self.log("No prompts collected. Stopping.")
+                return
+
+            # 3. Switch to Gemini
+            gemini_url = "gemini.google.com/app"
+            found_gemini = False
+            for handle in self.bot.driver.window_handles:
+                self.bot.driver.switch_to.window(handle)
+                if gemini_url in self.bot.driver.current_url:
+                    found_gemini = True
+                    break
+            
+            if not found_gemini:
+                self.log("Error: Gemini tab not found! Please open it.", error=True)
+                return
+
+            time.sleep(1)
+
+            # 4. Input Prompts loop
+            input_box_xpath = "//div[contains(@class, 'ql-editor') and @contenteditable='true']"
+            
+            for i, prompt in enumerate(all_prompts):
+                self.log(f"Processing Gemini {i+1}/{len(all_prompts)}...")
+                
+                try:
+                    # Find Input Box
+                    input_box = WebDriverWait(self.bot.driver, 10).until(
+                        EC.presence_of_element_located((By.XPATH, input_box_xpath))
+                    )
+                    
+                    # Click to focus
+                    input_box.click()
+                    
+                    # Paste text
+                    input_box.send_keys(prompt)
+                    time.sleep(1)
+                    input_box.send_keys(Keys.ENTER)
+                    
+                    self.log(f"  -> Sent prompt {i+1}. Waiting for generation...")
+                    time.sleep(2)
+
+                    # Check for Stop Icon
+                    stop_icon_xpath = "//mat-icon[contains(@data-mat-icon-name, 'stop') or @fonticon='stop']"
+                    
+                    # Wait loop: check if stop icon is present
+                    while True:
+                        try:
+                            # Try to find the stop button with a short timeout
+                            self.bot.driver.find_element(By.XPATH, stop_icon_xpath)
+                            # If found, it means it's still generating
+                            time.sleep(1)
+                        except:
+                            # If NOT found (NoSuchElementException), it means generation finished
+                            self.log("  -> Generation finished.")
+                            break
+                    
+                    # Proceed to next variable immediately
+
+                except Exception as e:
+                    self.log(f"Error in Gemini loop: {e}", error=True)
+                    return
+
+            self.log("Gemini Automation Complete!", error=False)
+
+        except Exception as e:
+            self.log(f"Critical Error: {e}", error=True)
+            import traceback
+            traceback.print_exc()
 
     def log(self, message, error=False):
         color = "red" if error else "SystemButtonFace" # Use default or specific color
@@ -140,6 +435,9 @@ class App(ctk.CTk):
 
         time.sleep(1) # Brief pause after switch
 
+        # Get user page range
+        pages = self.entry_png_pages.get().strip() or "1-4"
+
         # Define steps with your specific XPaths
         steps = [
             # Step 1: Rename Design (New!)
@@ -157,8 +455,8 @@ class App(ctk.CTk):
             # Force click as requested (assuming it starts unchecked)
             ("Click Transparent", "//label[.//p[contains(text(), 'Transparent background')]]"),
             
-            # Step 7: Set Pages to 1-4
-            ("Set Pages to 1-4", "//input[@placeholder='Select pages']", "1-4"),
+            # Step 7: Set Pages
+            (f"Set Pages to {pages}", "//input[@placeholder='Select pages']", pages),
             
             # Step 8: Click Final Download Button
             ("Final Download", "//button[@type='submit'][.//span[contains(text(), 'Download')]]")
@@ -182,6 +480,9 @@ class App(ctk.CTk):
 
         time.sleep(1) # Brief pause after switch
 
+        # Get user page range
+        pages = self.entry_jpg_pages.get().strip() or "6-9"
+
         # Define steps for JPG
         steps = [
             # Step 1: Rename Design (New!)
@@ -195,8 +496,8 @@ class App(ctk.CTk):
             # Step 5: Set Size to 0.5
             ("Set Size to 0.5", "//input[@role='spinbutton']", "0.5"),
             
-            # Step 6: Set Pages to 6-9
-            ("Set Pages to 6-9", "//input[@placeholder='Select pages']", "6-9"),
+            # Step 6: Set Pages
+            (f"Set Pages to {pages}", "//input[@placeholder='Select pages']", pages),
             
             # Step 7: Click Final Download Button
             ("Final Download", "//button[@type='submit'][.//span[contains(text(), 'Download')]]")
@@ -220,6 +521,9 @@ class App(ctk.CTk):
 
         time.sleep(1) # Brief pause after switch
 
+        # Get user page range
+        pages = self.entry_pdf_pages.get().strip() or "10"
+
         # Define steps for PDF
         steps = [
             # Step 1: Rename Design (New!)
@@ -230,8 +534,8 @@ class App(ctk.CTk):
             ("Click File Type", "//button[@aria-label='File type']"),
             ("Select PDF Standard", "//li[@role='option']//div[contains(text(), 'PDF Standard')]"),
             
-            # Step 5: Set Pages to 10
-            ("Set Pages to 10", "//input[@placeholder='Select pages']", "10"),
+            # Step 5: Set Pages
+            (f"Set Pages to {pages}", "//input[@placeholder='Select pages']", pages),
             
             # Step 6: Click Final Download Button
             ("Final Download", "//button[@type='submit'][.//span[contains(text(), 'Download')]]")
@@ -291,32 +595,49 @@ class App(ctk.CTk):
             time.sleep(2)
             self.bot.switch_to_tab_containing("ddcm.litarandfriends.uk")
 
-        extracted_data = {}
         ddcm_fields = [
-            ("name", "/html/body/main/div[3]/div/div[2]/div[2]/div/div/div"),
-            ("tag", "/html/body/main/div[3]/div/div[2]/div[10]/div/div/div"),
-            ("material", "/html/body/main/div[3]/div/div[2]/div[11]/div/div/div/div"),
-            ("description", "/html/body/main/div[3]/div/div[2]/div[12]/div/div/div/div")
+            ("name", "//div[@class='card-header']//div[contains(@class, 'card-title')]"),
+            ("description", "/html/body/main/div[3]/div/div[2]/div[12]/div/div/div/div"), # Keeping old description xpath
+            ("tag", "/html/body/main/div[3]/div/div[2]/div[10]/div/div/div"), # Keeping old tag xpath
+            ("material", "/html/body/main/div[3]/div/div[2]/div[11]/div/div/div/div"), # Keeping old material xpath
+            ("theme", "/html/body/main/div[4]/div/div[2]/div[5]/div/div/div"),
+            ("price", "/html/body/main/div[4]/div/div[2]/div[8]/div/div/div")
         ]
 
+        extracted_data = {}
+        # Simple scroll to top to ensure we find elements if lazy loaded? usually not needed for hardcoded xpaths
+        
         for field_name, xpath in ddcm_fields:
             try:
-                element = WebDriverWait(self.bot.driver, 10).until(
+                # Use a smaller timeout for optional fields
+                timeout = 5
+                element = WebDriverWait(self.bot.driver, timeout).until(
                     EC.presence_of_element_located((By.XPATH, xpath))
                 )
-                # Auto-scroll to element before extracting
                 self.bot.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", element)
                 time.sleep(0.2)
                 
-                # Filter out any weird characters if needed
                 text = element.text.strip()
                 extracted_data[field_name] = text
-                self.log(f"Extracted {field_name}")
+                self.log(f"Extracted {field_name}: {text[:30]}...")
             except Exception:
-                self.log(f"Error: Could not find '{field_name}' on DDCM within 10s.", error=True)
-                return
+                self.log(f"Warning: Could not extract '{field_name}' from DDCM. Using default.", error=False)
+                extracted_data[field_name] = ""
 
         self.log("Extracted all data from DDCM.")
+        
+        # Prepare variables from extraction
+        # Price from DDCM (fallback to "5.99" if Failed)
+        user_price = extracted_data.get('price', '5.99')
+        if not user_price: user_price = "5.99"
+        
+        # Shop Section from DDCM Theme (fallback to "General" if Failed)
+        user_section = extracted_data.get('theme', 'General')
+        if not user_section: user_section = "General"
+
+        if not all([user_primary, user_secondary, user_price, user_section]):
+            self.log("Error: All 4 fields (Colors, Price, Section) must be filled!", error=True)
+            return
 
         # 2. Go to Etsy (Force New Tab)
         etsy_create_url = "https://www.etsy.com/your/shops/me/listing-editor/create"
@@ -373,7 +694,7 @@ class App(ctk.CTk):
             ("Paste Title", "//textarea[@id='listing-title-input']", extracted_data.get('name', '')),
             # 2. Description
             ("Paste Description", "//textarea[@id='listing-description-textarea' or @name='description']", extracted_data.get('description', '')),
-            # 3. Price
+            # 3. Price (Using Extracted Data)
             ("Paste Price", "//input[@id='listing-price-input']", user_price),
             # 4. Quantity
             ("Paste Quantity", "//input[@id='listing-quantity-input']", "999"),
@@ -399,7 +720,7 @@ class App(ctk.CTk):
             ("Paste Material", "//input[@id='listing-materials-input']", extracted_data.get('material', '')),
             ("Click Add Material", "//button[@id='listing-materials-button']"),
             
-            # 10. Shop Section
+            # 10. Shop Section (Using Extracted Data)
             ("Select Shop Section", "//select[@id='shop-section-select']", user_section)
         ]
 

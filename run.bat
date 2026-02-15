@@ -7,32 +7,41 @@ setlocal
 echo Checking for running Chrome processes...
 tasklist /FI "IMAGENAME eq chrome.exe" 2>NUL | find /I /N "chrome.exe" >NUL
 if "%ERRORLEVEL%"=="0" (
-    :: Check if it's OUR debug instance (port 9222 listening)
-    netstat -an | find "9222" >nul
-    if %errorlevel% equ 0 (
-        echo [INFO] Debug Chrome is already running.
-        set /p USE_EXISTING="Use existing Chrome instance? (y/n): "
-        if /i "%USE_EXISTING%"=="y" goto :run_python
+    goto :check_debug_port
+)
+goto :launch_custom
 
-        echo Killing existing Chrome and restarting...
-        taskkill /F /IM chrome.exe /T 2>NUL
-        timeout /t 2
-        goto :launch_custom
-    ) else (
-        echo.
-        echo [WARNING] Normal Chrome is running!
-        echo You MUST close it to start our Debug Chrome.
-        set /p KILL_CHROME="Kill Chrome now? (y/n): "
-        if /i "%KILL_CHROME%"=="y" (
-            taskkill /F /IM chrome.exe /T 2>NUL
-            timeout /t 2
-            goto :launch_custom
-        ) else (
-            echo Please close Chrome manually and run again.
-            pause
-            exit /b
-        )
-    )
+:check_debug_port
+:: Check if it's OUR debug instance (port 9222 listening)
+netstat -an | find "9222" >nul
+if %errorlevel% equ 0 (
+    goto :debug_running
+)
+goto :normal_chrome_running
+
+:debug_running
+echo [INFO] Debug Chrome is already running.
+set /p USE_EXISTING="Use existing Chrome instance? (y/n): "
+if /i "%USE_EXISTING%"=="y" goto :run_python
+
+echo Killing existing Chrome and restarting...
+taskkill /F /IM chrome.exe /T 2>NUL
+timeout /t 2
+goto :launch_custom
+
+:normal_chrome_running
+echo.
+echo [WARNING] Normal Chrome is running!
+echo You MUST close it to start our Debug Chrome.
+set /p KILL_CHROME="Kill Chrome now? (y/n): "
+if /i "%KILL_CHROME%"=="y" (
+    taskkill /F /IM chrome.exe /T 2>NUL
+    timeout /t 2
+    goto :launch_custom
+) else (
+    echo Please close Chrome manually and run again.
+    pause
+    exit /b
 )
 
 :launch_custom
@@ -51,12 +60,13 @@ set "CHROME_PATH=%LOCALAPPDATA%\Google\Chrome\Application\chrome.exe"
 set "URL1=https://www.canva.com/projects"
 set "URL2=https://ddcm.litarandfriends.uk"
 set "URL3=https://www.etsy.com/your/shops/me/tools/listings/stats:true?ref=seller-platform-mcnav"
+set "URL4=https://gemini.google.com/app"
 
 if not exist "%CHROME_PATH%" set "CHROME_PATH=C:\Program Files\Google\Chrome\Application\chrome.exe"
 if not exist "%CHROME_PATH%" set "CHROME_PATH=C:\Program Files (x86)\Google\Chrome\Application\chrome.exe"
 
 :: LAUNCH COMMAND
-start "" "%CHROME_PATH%" --remote-debugging-port=9222 --user-data-dir="%USER_DATA%" "%URL1%" "%URL2%" "%URL3%"
+start "" "%CHROME_PATH%" --remote-debugging-port=9222 --user-data-dir="%USER_DATA%" "%URL1%" "%URL2%" "%URL3%" "%URL4%"
 
 echo Waiting 5 seconds for Chrome to launch...
 timeout /t 5
