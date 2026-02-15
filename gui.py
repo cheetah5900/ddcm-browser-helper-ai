@@ -90,10 +90,29 @@ class App(ctk.CTk):
         self.frame_files.grid_columnconfigure(0, weight=1)
 
         self.lbl_files = ctk.CTkLabel(self.frame_files, text="File Tools", font=("Arial", 16, "bold"))
-        self.lbl_files.grid(row=0, column=0, pady=(10, 15), sticky="w")
+        self.lbl_files.grid(row=0, column=0, columnspan=2, pady=(10, 15), sticky="w")
+
+        # Path 1 Config
+        self.entry_path1 = ctk.CTkEntry(self.frame_files, placeholder_text="Path 1", width=140)
+        self.entry_path1.insert(0, r"C:\Files\Project\local DDCM")
+        self.entry_path1.grid(row=1, column=0, pady=5, sticky="w")
+        
+        self.entry_folder1 = ctk.CTkEntry(self.frame_files, placeholder_text="Folder Name 1", width=140)
+        self.entry_folder1.grid(row=1, column=1, padx=5, pady=5, sticky="w")
+
+        # Path 2 Config
+        self.entry_path2 = ctk.CTkEntry(self.frame_files, placeholder_text="Path 2", width=140)
+        self.entry_path2.insert(0, r"G:\My Drive\Projects\DDCM\Cliparts DDCM")
+        self.entry_path2.grid(row=2, column=0, pady=5, sticky="w")
+
+        self.entry_folder2 = ctk.CTkEntry(self.frame_files, placeholder_text="Folder Name 2", width=140)
+        self.entry_folder2.grid(row=2, column=1, padx=5, pady=5, sticky="w")
+
+        self.btn_create_folders = ctk.CTkButton(self.frame_files, text="Create Folders", width=140, command=self.action_create_folders, fg_color="#27AE60")
+        self.btn_create_folders.grid(row=3, column=0, columnspan=2, pady=10, sticky="w")
 
         self.btn_unzip = ctk.CTkButton(self.frame_files, text="Unzip Downloads", width=140, command=self.action_unzip_downloads, fg_color="#FFA500")
-        self.btn_unzip.grid(row=1, column=0, pady=10, sticky="w")
+        self.btn_unzip.grid(row=4, column=0, columnspan=2, pady=10, sticky="w")
         
 
         # === COLUMN 2: Etsy and DDMC ===
@@ -575,6 +594,45 @@ class App(ctk.CTk):
         
         self.log("ALL Exports Completed Successfully!")
 
+    def action_create_folders(self):
+        """Creates folder structures based on user input."""
+        configs = [
+            {
+                "path": self.entry_path1.get().strip(),
+                "folder": self.entry_folder1.get().strip(),
+                "subfolders": ["4000x4000", "Download file", "Original", "Preview", "Sticker Set"]
+            },
+            {
+                "path": self.entry_path2.get().strip(),
+                "folder": self.entry_folder2.get().strip(),
+                "subfolders": ["4000x4000", "Sticker Set"]
+            }
+        ]
+
+        for i, config in enumerate(configs):
+            base_path = config["path"]
+            folder_name = config["folder"]
+            subfolders = config["subfolders"]
+
+            if not base_path or not folder_name:
+                continue
+
+            full_path = os.path.join(base_path, folder_name)
+            
+            try:
+                if os.path.exists(full_path):
+                    self.log(f"Path {i+1}: '{folder_name}' already exists. Skipping.")
+                else:
+                    os.makedirs(full_path)
+                    self.log(f"Path {i+1}: Created '{folder_name}'.")
+                    
+                    # Create subfolders
+                    for sub in subfolders:
+                        os.makedirs(os.path.join(full_path, sub))
+                    self.log(f"Path {i+1}: Created {len(subfolders)} subfolders.")
+            except Exception as e:
+                self.log(f"Error creating folders for Path {i+1}: {e}", error=True)
+
     def action_etsy_listing(self):
         """Extracts data from DDCM and populates the Etsy listing creator with user inputs."""
         self.log("Starting Etsy Listing process...")
@@ -582,11 +640,12 @@ class App(ctk.CTk):
         # 0. Get user inputs from GUI and validate
         user_primary = self.entry_primary.get().strip()
         user_secondary = self.entry_secondary.get().strip()
-        user_price = self.entry_price.get().strip()
-        user_section = self.entry_section.get().strip()
+        # Price and Section are auto-extracted now, so setting to None for initial logic
+        user_price = None 
+        user_section = None
 
-        if not all([user_primary, user_secondary, user_price, user_section]):
-            self.log("Error: All 4 fields (Colors, Price, Section) must be filled!", error=True)
+        if not all([user_primary, user_secondary]):
+            self.log("Error: Colors must be filled!", error=True)
             return
 
         # 1. Extract from DDCM
@@ -596,10 +655,10 @@ class App(ctk.CTk):
             self.bot.switch_to_tab_containing("ddcm.litarandfriends.uk")
 
         ddcm_fields = [
-            ("name", "//div[@class='card-header']//div[contains(@class, 'card-title')]"),
-            ("description", "/html/body/main/div[3]/div/div[2]/div[12]/div/div/div/div"), # Keeping old description xpath
-            ("tag", "/html/body/main/div[3]/div/div[2]/div[10]/div/div/div"), # Keeping old tag xpath
-            ("material", "/html/body/main/div[3]/div/div[2]/div[11]/div/div/div/div"), # Keeping old material xpath
+            ("name", "/html/body/main/div[4]/div/div[2]/div[2]/div/div/div"),
+            ("tag", "/html/body/main/div[4]/div/div[2]/div[10]/div/div/div"), 
+            ("material", "/html/body/main/div[4]/div/div[2]/div[11]/div/div/div/div"), 
+            ("description", "/html/body/main/div[4]/div/div[2]/div[12]/div/div/div/div"),
             ("theme", "/html/body/main/div[4]/div/div[2]/div[5]/div/div/div"),
             ("price", "/html/body/main/div[4]/div/div[2]/div[8]/div/div/div")
         ]
@@ -621,8 +680,8 @@ class App(ctk.CTk):
                 extracted_data[field_name] = text
                 self.log(f"Extracted {field_name}: {text[:30]}...")
             except Exception:
-                self.log(f"Warning: Could not extract '{field_name}' from DDCM. Using default.", error=False)
-                extracted_data[field_name] = ""
+                self.log(f"Error: Could not extract '{field_name}' from DDCM. Stopping.", error=True)
+                return
 
         self.log("Extracted all data from DDCM.")
         
