@@ -318,27 +318,17 @@ class App(ctk.CTk):
 
         self.log("Extracted all data from DDCM.")
 
-        # 2. Go to Etsy (Strict Check)
+        # 2. Go to Etsy (Force New Tab)
         etsy_create_url = "https://www.etsy.com/your/shops/me/listing-editor/create"
-        self.log("Checking for Etsy Create Listing page...")
+        self.log("Opening new Etsy Create Listing tab...")
         
-        found_etsy_tab = False
-        # Iterate through all tabs to find the exact creator URL
-        for handle in self.bot.driver.window_handles:
-            self.bot.driver.switch_to.window(handle)
-            # Check if current URL contains the target 'create' path
-            if "etsy.com/your/shops/me/listing-editor/create" in self.bot.driver.current_url:
-                found_etsy_tab = True
-                self.log("Found Etsy Create tab.")
-                break
-        
-        if not found_etsy_tab:
-            self.log("Etsy Create page not found. Opening new tab...")
-            self.bot.driver.execute_script(f"window.open('{etsy_create_url}', '_blank');")
-            time.sleep(5) # Give more time for Etsy to load
-            self.bot.driver.switch_to.window(self.bot.driver.window_handles[-1])
-            # Final check/wait to ensure it's loaded
-            WebDriverWait(self.bot.driver, 10).until(lambda d: "etsy.com" in d.current_url)
+        # Open NEW tab explicitly EVERY TIME
+        self.bot.driver.execute_script(f"window.open('{etsy_create_url}', '_blank');")
+        time.sleep(5) 
+        # Switch to the NEWly opened tab (last handle)
+        self.bot.driver.switch_to.window(self.bot.driver.window_handles[-1])
+        self.log("Opened and switched to new Etsy tab.")
+        WebDriverWait(self.bot.driver, 10).until(lambda d: "etsy.com" in d.current_url)
         
         time.sleep(2)
 
@@ -418,14 +408,9 @@ class App(ctk.CTk):
             try:
                 # Handle special key actions
                 if xpath == "SPECIAL_ESC":
-                    self.log(f"Etsy Action: Force Hide Dropdown")
-                    self.bot.driver.execute_script("""
-                        var dropdowns = document.querySelectorAll('.wt-menu__body');
-                        dropdowns.forEach(function(d) {
-                            d.style.display = 'none';
-                            d.setAttribute('aria-hidden', 'true');
-                        });
-                    """)
+                    self.log(f"Etsy Action: Click outside to close Dropdown")
+                    # Click body to close dropdown naturally
+                    self.bot.driver.find_element(By.TAG_NAME, "body").click()
                     time.sleep(0.5)
                     continue
 

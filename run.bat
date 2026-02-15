@@ -10,8 +10,14 @@ if "%ERRORLEVEL%"=="0" (
     :: Check if it's OUR debug instance (port 9222 listening)
     netstat -an | find "9222" >nul
     if %errorlevel% equ 0 (
-        echo [INFO] Debug Chrome is already running. Proceeding...
-        goto :run_python
+        echo [INFO] Debug Chrome is already running.
+        set /p USE_EXISTING="Use existing Chrome instance? (y/n): "
+        if /i "%USE_EXISTING%"=="y" goto :run_python
+
+        echo Killing existing Chrome and restarting...
+        taskkill /F /IM chrome.exe /T 2>NUL
+        timeout /t 2
+        goto :launch_custom
     ) else (
         echo.
         echo [WARNING] Normal Chrome is running!
