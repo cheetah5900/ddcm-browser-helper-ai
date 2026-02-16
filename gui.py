@@ -92,27 +92,31 @@ class App(ctk.CTk):
         self.lbl_files = ctk.CTkLabel(self.frame_files, text="File Tools", font=("Arial", 16, "bold"))
         self.lbl_files.grid(row=0, column=0, columnspan=2, pady=(10, 15), sticky="w")
 
+        # Folder Name (Top)
+        self.entry_folder_name = ctk.CTkEntry(self.frame_files, placeholder_text="Folder Name", width=300)
+        self.entry_folder_name.grid(row=1, column=0, columnspan=2, pady=(0, 10), sticky="ew")
+
         # Path 1 Config
-        self.entry_path1 = ctk.CTkEntry(self.frame_files, placeholder_text="Path 1", width=140)
-        self.entry_path1.insert(0, r"C:\Files\Project\local DDCM")
-        self.entry_path1.grid(row=1, column=0, pady=5, sticky="w")
+        self.lbl_path1 = ctk.CTkLabel(self.frame_files, text="Path 1 (Original, Preview, etc.)", font=("Arial", 10))
+        self.lbl_path1.grid(row=2, column=0, columnspan=2, sticky="w")
         
-        self.entry_folder1 = ctk.CTkEntry(self.frame_files, placeholder_text="Folder Name 1", width=140)
-        self.entry_folder1.grid(row=1, column=1, padx=5, pady=5, sticky="w")
-
+        self.entry_path1 = ctk.CTkEntry(self.frame_files, placeholder_text="Path 1", width=300)
+        self.entry_path1.insert(0, r"C:\Files\Project\local DDCM")
+        self.entry_path1.grid(row=3, column=0, columnspan=2, pady=(0, 10), sticky="ew")
+        
         # Path 2 Config
-        self.entry_path2 = ctk.CTkEntry(self.frame_files, placeholder_text="Path 2", width=140)
-        self.entry_path2.insert(0, r"G:\My Drive\Projects\DDCM\Cliparts DDCM")
-        self.entry_path2.grid(row=2, column=0, pady=5, sticky="w")
+        self.lbl_path2 = ctk.CTkLabel(self.frame_files, text="Path 2 (4000x4000, Sticker Set)", font=("Arial", 10))
+        self.lbl_path2.grid(row=4, column=0, columnspan=2, sticky="w")
 
-        self.entry_folder2 = ctk.CTkEntry(self.frame_files, placeholder_text="Folder Name 2", width=140)
-        self.entry_folder2.grid(row=2, column=1, padx=5, pady=5, sticky="w")
+        self.entry_path2 = ctk.CTkEntry(self.frame_files, placeholder_text="Path 2", width=300)
+        self.entry_path2.insert(0, r"G:\My Drive\Projects\DDCM\Cliparts DDCM")
+        self.entry_path2.grid(row=5, column=0, columnspan=2, pady=(0, 10), sticky="ew")
 
         self.btn_create_folders = ctk.CTkButton(self.frame_files, text="Create Folders", width=140, command=self.action_create_folders, fg_color="#27AE60")
-        self.btn_create_folders.grid(row=3, column=0, columnspan=2, pady=10, sticky="w")
+        self.btn_create_folders.grid(row=6, column=0, columnspan=2, pady=10, sticky="w")
 
         self.btn_unzip = ctk.CTkButton(self.frame_files, text="Unzip Downloads", width=140, command=self.action_unzip_downloads, fg_color="#FFA500")
-        self.btn_unzip.grid(row=4, column=0, columnspan=2, pady=10, sticky="w")
+        self.btn_unzip.grid(row=7, column=0, columnspan=2, pady=10, sticky="w")
         
 
         # === COLUMN 2: Etsy and DDMC ===
@@ -596,15 +600,21 @@ class App(ctk.CTk):
 
     def action_create_folders(self):
         """Creates folder structures based on user input."""
+        folder_name = self.entry_folder_name.get().strip()
+        
+        if not folder_name:
+             self.log("Error: Folder Name is required.", error=True)
+             return
+
         configs = [
             {
                 "path": self.entry_path1.get().strip(),
-                "folder": self.entry_folder1.get().strip(),
+                "folder": folder_name,
                 "subfolders": ["4000x4000", "Download file", "Original", "Preview", "Sticker Set"]
             },
             {
                 "path": self.entry_path2.get().strip(),
-                "folder": self.entry_folder2.get().strip(),
+                "folder": folder_name,
                 "subfolders": ["4000x4000", "Sticker Set"]
             }
         ]
@@ -702,13 +712,19 @@ class App(ctk.CTk):
         etsy_create_url = "https://www.etsy.com/your/shops/me/listing-editor/create"
         self.log("Opening new Etsy Create Listing tab...")
         
-        # Open NEW tab explicitly EVERY TIME
-        self.bot.driver.execute_script(f"window.open('{etsy_create_url}', '_blank');")
-        time.sleep(5) 
+        # Open NEW tab using Selenium native method
+        self.bot.driver.switch_to.new_window('tab')
+        self.bot.driver.get(etsy_create_url)
+        
         # Switch to the NEWly opened tab (last handle)
         self.bot.driver.switch_to.window(self.bot.driver.window_handles[-1])
         self.log("Opened and switched to new Etsy tab.")
-        WebDriverWait(self.bot.driver, 10).until(lambda d: "etsy.com" in d.current_url)
+        
+        # improved wait for url
+        try:
+             WebDriverWait(self.bot.driver, 15).until(lambda d: "etsy.com" in d.current_url)
+        except:
+             self.log("Warning: Etsy URL loading timed out, but proceeding...", error=False)
         
         time.sleep(2)
 
