@@ -3,6 +3,7 @@ import threading
 import time
 import os
 import zipfile
+import shutil
 from browser_bot import BrowserBot
 import time
 from selenium.webdriver.common.by import By
@@ -93,30 +94,63 @@ class App(ctk.CTk):
         self.lbl_files.grid(row=0, column=0, columnspan=2, pady=(10, 15), sticky="w")
 
         # Folder Name (Top)
+        self.lbl_folder_name = ctk.CTkLabel(self.frame_files, text="Folder Name", font=("Arial", 10))
+        self.lbl_folder_name.grid(row=1, column=0, columnspan=2, sticky="w")
+        
         self.entry_folder_name = ctk.CTkEntry(self.frame_files, placeholder_text="Folder Name", width=300)
-        self.entry_folder_name.grid(row=1, column=0, columnspan=2, pady=(0, 10), sticky="ew")
+        self.entry_folder_name.grid(row=2, column=0, columnspan=2, pady=(0, 10), sticky="ew")
+
+        # Element Name
+        self.lbl_element_name = ctk.CTkLabel(self.frame_files, text="Element Name (optional)", font=("Arial", 10))
+        self.lbl_element_name.grid(row=3, column=0, columnspan=2, sticky="w")
+        
+        self.entry_element_name = ctk.CTkEntry(self.frame_files, placeholder_text="Element Name", width=300)
+        self.entry_element_name.insert(0, "Songkran")
+        self.entry_element_name.grid(row=4, column=0, columnspan=2, pady=(0, 10), sticky="ew")
+
+        # Element Path
+        self.lbl_element_path = ctk.CTkLabel(self.frame_files, text="Element Path (optional)", font=("Arial", 10))
+        self.lbl_element_path.grid(row=5, column=0, columnspan=2, sticky="w")
+        
+        self.entry_element_path = ctk.CTkEntry(self.frame_files, placeholder_text="Element Path", width=300)
+        self.entry_element_path.insert(0, r"C:\Files\Project\local DDCM\Elements")
+        self.entry_element_path.grid(row=6, column=0, columnspan=2, pady=(0, 10), sticky="ew")
 
         # Path 1 Config
         self.lbl_path1 = ctk.CTkLabel(self.frame_files, text="Path 1 (Original, Preview, etc.)", font=("Arial", 10))
-        self.lbl_path1.grid(row=2, column=0, columnspan=2, sticky="w")
+        self.lbl_path1.grid(row=7, column=0, columnspan=2, sticky="w")
         
         self.entry_path1 = ctk.CTkEntry(self.frame_files, placeholder_text="Path 1", width=300)
         self.entry_path1.insert(0, r"C:\Files\Project\local DDCM")
-        self.entry_path1.grid(row=3, column=0, columnspan=2, pady=(0, 10), sticky="ew")
+        self.entry_path1.grid(row=8, column=0, columnspan=2, pady=(0, 10), sticky="ew")
         
         # Path 2 Config
         self.lbl_path2 = ctk.CTkLabel(self.frame_files, text="Path 2 (4000x4000, Sticker Set)", font=("Arial", 10))
-        self.lbl_path2.grid(row=4, column=0, columnspan=2, sticky="w")
+        self.lbl_path2.grid(row=9, column=0, columnspan=2, sticky="w")
 
         self.entry_path2 = ctk.CTkEntry(self.frame_files, placeholder_text="Path 2", width=300)
         self.entry_path2.insert(0, r"G:\My Drive\Projects\DDCM\Cliparts DDCM")
-        self.entry_path2.grid(row=5, column=0, columnspan=2, pady=(0, 10), sticky="ew")
+        self.entry_path2.grid(row=10, column=0, columnspan=2, pady=(0, 10), sticky="ew")
 
         self.btn_create_folders = ctk.CTkButton(self.frame_files, text="Create Folders", width=140, command=self.action_create_folders, fg_color="#27AE60")
-        self.btn_create_folders.grid(row=6, column=0, columnspan=2, pady=10, sticky="w")
+        self.btn_create_folders.grid(row=11, column=0, columnspan=2, pady=(10, 0), sticky="w")
+        self.lbl_desc_create = ctk.CTkLabel(self.frame_files, text="สร้างโฟลเดอร์หลักและโฟลเดอร์ย่อย", font=("Arial", 10))
+        self.lbl_desc_create.grid(row=12, column=0, columnspan=2, pady=(0, 5), sticky="w")
+
+        self.btn_copy_upscale = ctk.CTkButton(self.frame_files, text="Copy upscale img", width=140, command=self.action_copy_upscale, fg_color="#8E44AD")
+        self.btn_copy_upscale.grid(row=13, column=0, columnspan=2, pady=(5, 0), sticky="w")
+        self.lbl_desc_copy_upscale = ctk.CTkLabel(self.frame_files, text="คัดลอกไฟล์จาก upscayl และ Element ไปยัง 4000x4000", font=("Arial", 10))
+        self.lbl_desc_copy_upscale.grid(row=14, column=0, columnspan=2, pady=(0, 5), sticky="w")
+
+        self.btn_local_remote = ctk.CTkButton(self.frame_files, text="Local to Remote", width=140, command=self.action_local_remote, fg_color="#3498DB")
+        self.btn_local_remote.grid(row=15, column=0, columnspan=2, pady=(5, 0), sticky="w")
+        self.lbl_desc_local_remote = ctk.CTkLabel(self.frame_files, text="คัดลอก 4000x4000, Sticker Set ไป Path 2", font=("Arial", 10))
+        self.lbl_desc_local_remote.grid(row=16, column=0, columnspan=2, pady=(0, 5), sticky="w")
 
         self.btn_unzip = ctk.CTkButton(self.frame_files, text="Unzip Downloads", width=140, command=self.action_unzip_downloads, fg_color="#FFA500")
-        self.btn_unzip.grid(row=7, column=0, columnspan=2, pady=10, sticky="w")
+        self.btn_unzip.grid(row=17, column=0, columnspan=2, pady=(5, 0), sticky="w")
+        self.lbl_desc_unzip = ctk.CTkLabel(self.frame_files, text="แตกไฟล์ Zip จากโฟลเดอร์ Download", font=("Arial", 10))
+        self.lbl_desc_unzip.grid(row=18, column=0, columnspan=2, pady=(0, 10), sticky="w")
         
 
         # === COLUMN 2: Etsy and DDMC ===
@@ -642,6 +676,93 @@ class App(ctk.CTk):
                     self.log(f"Path {i+1}: Created {len(subfolders)} subfolders.")
             except Exception as e:
                 self.log(f"Error creating folders for Path {i+1}: {e}", error=True)
+
+    def action_copy_upscale(self):
+        """Copies files from upscayl_png_remacri-4x_4x and element folder to 4000x4000 in Path 1."""
+        folder_name = self.entry_folder_name.get().strip()
+        path1 = self.entry_path1.get().strip()
+        
+        if not folder_name or not path1:
+            self.log("Error: Folder Name and Path 1 are required.", error=True)
+            return
+
+        dest_dir = os.path.join(path1, folder_name, "4000x4000")
+        src_dir = os.path.join(path1, folder_name, "Original", "upscayl_png_remacri-4x_4x")
+        
+        if os.path.exists(src_dir):
+            os.makedirs(dest_dir, exist_ok=True)
+            try:
+                count = 0
+                for item in os.listdir(src_dir):
+                    s = os.path.join(src_dir, item)
+                    d = os.path.join(dest_dir, item)
+                    if os.path.isfile(s):
+                        shutil.copy2(s, d)
+                        count += 1
+                shutil.rmtree(src_dir)
+                self.log(f"Copied {count} files to 4000x4000 and deleted original folder.")
+            except Exception as e:
+                self.log(f"Error copying upscale images: {e}", error=True)
+        else:
+            self.log(f"Warning: {src_dir} not found. Skipping upscale copy.", error=False)
+
+        element_name = self.entry_element_name.get().strip()
+        element_path = self.entry_element_path.get().strip()
+        
+        if element_name and element_path:
+            element_src_dir = os.path.join(element_path, element_name)
+            if os.path.exists(element_src_dir):
+                os.makedirs(dest_dir, exist_ok=True)
+                try:
+                    elem_count = 0
+                    for item in os.listdir(element_src_dir):
+                        s = os.path.join(element_src_dir, item)
+                        d = os.path.join(dest_dir, item)
+                        if os.path.isfile(s):
+                            shutil.copy2(s, d)
+                            elem_count += 1
+                    self.log(f"Copied {elem_count} element files to 4000x4000.")
+                except Exception as e:
+                    self.log(f"Error copying element files: {e}", error=True)
+            else:
+                self.log(f"Warning: Element path {element_src_dir} not found.", error=True)
+
+    def action_local_remote(self):
+        """Copies 4000x4000 and Sticker Set folders from Path 1 to Path 2."""
+        folder_name = self.entry_folder_name.get().strip()
+        path1 = self.entry_path1.get().strip()
+        path2 = self.entry_path2.get().strip()
+        
+        if not folder_name or not path1 or not path2:
+            self.log("Error: Folder Name, Path 1 and Path 2 are required.", error=True)
+            return
+            
+        folders_to_copy = ["4000x4000", "Sticker Set"]
+        total_copied = 0
+        
+        try:
+            for subfolder in folders_to_copy:
+                src_dir = os.path.join(path1, folder_name, subfolder)
+                dest_dir = os.path.join(path2, folder_name, subfolder)
+                
+                if not os.path.exists(src_dir):
+                    self.log(f"Warning: {src_dir} not found.", error=False)
+                    continue
+
+                os.makedirs(dest_dir, exist_ok=True)
+                
+                count = 0
+                for item in os.listdir(src_dir):
+                    s = os.path.join(src_dir, item)
+                    d = os.path.join(dest_dir, item)
+                    if os.path.isfile(s):
+                        shutil.copy2(s, d)
+                        count += 1
+                total_copied += count
+            
+            self.log(f"Copied {total_copied} files to Path 2.")
+        except Exception as e:
+            self.log(f"Error copying to remote: {e}", error=True)
 
     def action_etsy_listing(self):
         """Extracts data from DDCM and populates the Etsy listing creator with user inputs."""
