@@ -12,7 +12,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 # --- Configuration ---
-CONFIG_FILE = "config.json"
+CONFIG_FILE = "config_win.json" if os.name == 'nt' else "config_mac.json"
 
 class App(ctk.CTk):
     def __init__(self):
