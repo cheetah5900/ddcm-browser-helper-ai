@@ -4,25 +4,22 @@ import time
 import os
 import zipfile
 import shutil
+import json
 from browser_bot import BrowserBot
-import time
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 # --- Configuration ---
-# You can update these XPaths later
-XPATH_CONFIG = {
-    "export_png": "//button[contains(text(), 'Export PNG')]", # Placeholder
-}
+CONFIG_FILE = "config.json"
 
 class App(ctk.CTk):
     def __init__(self):
         super().__init__()
 
         self.title("Browser Controller")
-        self.geometry("1200x600") # Widen window 3x
+        self.geometry("1400x650") # Widen to support side-by-side file tools
         
         # Initialize the bot
         self.bot = BrowserBot()
@@ -40,11 +37,11 @@ class App(ctk.CTk):
         self.controls_frame = ctk.CTkFrame(self)
         self.controls_frame.grid(row=1, column=0, padx=20, pady=20, sticky="nsew")
         
-        # Configure columns for horizontal layout (4 main columns)
-        self.controls_frame.grid_columnconfigure(0, weight=1) # Canva
-        self.controls_frame.grid_columnconfigure(1, weight=1) # File Tools
-        self.controls_frame.grid_columnconfigure(2, weight=1) # Etsy
-        self.controls_frame.grid_columnconfigure(3, weight=1) # Gemini
+        # Configure columns for horizontal layout
+        self.controls_frame.grid_columnconfigure(0, weight=0) # Canva
+        self.controls_frame.grid_columnconfigure(1, weight=1) # File Tools (Expands)
+        self.controls_frame.grid_columnconfigure(2, weight=0) # Etsy
+        self.controls_frame.grid_columnconfigure(3, weight=0) # Gemini
 
         # === COLUMN 0: Canva Automation ===
         self.frame_canva = ctk.CTkFrame(self.controls_frame, fg_color="transparent")
@@ -54,8 +51,6 @@ class App(ctk.CTk):
         self.lbl_canva = ctk.CTkLabel(self.frame_canva, text="Canva Automation", font=("Arial", 16, "bold"))
         self.lbl_canva.grid(row=0, column=0, pady=(10, 15), sticky="w")
 
-        # Shorter buttons (width=150 is example, adjust as needed)
-        
         # PNG Config
         self.entry_png_pages = ctk.CTkEntry(self.frame_canva, placeholder_text="Pages (e.g. 1-4)", width=140)
         self.entry_png_pages.insert(0, "1-4")
@@ -77,7 +72,6 @@ class App(ctk.CTk):
         self.entry_pdf_pages.insert(0, "10")
         self.entry_pdf_pages.grid(row=5, column=0, pady=(10, 0), sticky="w")
 
-        # Adjust rows for subsequent buttons
         self.btn_export_pdf = ctk.CTkButton(self.frame_canva, text="Export PDF", width=140, command=self.action_export_pdf, fg_color="#E04F5F")
         self.btn_export_pdf.grid(row=6, column=0, pady=(5, 10), sticky="w")
 
@@ -87,70 +81,77 @@ class App(ctk.CTk):
 
         # === COLUMN 1: File Tools ===
         self.frame_files = ctk.CTkFrame(self.controls_frame, fg_color="transparent")
-        self.frame_files.grid(row=0, column=1, padx=10, pady=10, sticky="nsw")
-        self.frame_files.grid_columnconfigure(0, weight=1)
+        self.frame_files.grid(row=0, column=1, padx=10, pady=10, sticky="nsew")
 
         self.lbl_files = ctk.CTkLabel(self.frame_files, text="File Tools", font=("Arial", 16, "bold"))
         self.lbl_files.grid(row=0, column=0, columnspan=2, pady=(10, 15), sticky="w")
 
-        # Folder Name (Top)
-        self.lbl_folder_name = ctk.CTkLabel(self.frame_files, text="Folder Name", font=("Arial", 10))
-        self.lbl_folder_name.grid(row=1, column=0, columnspan=2, sticky="w")
-        
-        self.entry_folder_name = ctk.CTkEntry(self.frame_files, placeholder_text="Folder Name", width=300)
-        self.entry_folder_name.grid(row=2, column=0, columnspan=2, pady=(0, 10), sticky="ew")
+        # Container for side-by-side layout
+        self.files_container = ctk.CTkFrame(self.frame_files, fg_color="transparent")
+        self.files_container.grid(row=1, column=0, sticky="nsew")
+
+        # --- LEFT SIDE: Inputs ---
+        self.files_left = ctk.CTkFrame(self.files_container, fg_color="transparent")
+        self.files_left.grid(row=0, column=0, padx=(0, 20), sticky="n")
+
+        # Folder Name
+        self.lbl_folder_name = ctk.CTkLabel(self.files_left, text="Folder Name", font=("Arial", 10))
+        self.lbl_folder_name.grid(row=0, column=0, sticky="w")
+        self.entry_folder_name = ctk.CTkEntry(self.files_left, placeholder_text="Folder Name", width=300)
+        self.entry_folder_name.grid(row=1, column=0, pady=(0, 10), sticky="ew")
 
         # Element Name
-        self.lbl_element_name = ctk.CTkLabel(self.frame_files, text="Element Name (optional)", font=("Arial", 10))
-        self.lbl_element_name.grid(row=3, column=0, columnspan=2, sticky="w")
-        
-        self.entry_element_name = ctk.CTkEntry(self.frame_files, placeholder_text="Element Name", width=300)
+        self.lbl_element_name = ctk.CTkLabel(self.files_left, text="Element Name (optional)", font=("Arial", 10))
+        self.lbl_element_name.grid(row=2, column=0, sticky="w")
+        self.entry_element_name = ctk.CTkEntry(self.files_left, placeholder_text="Element Name", width=300)
         self.entry_element_name.insert(0, "Songkran")
-        self.entry_element_name.grid(row=4, column=0, columnspan=2, pady=(0, 10), sticky="ew")
+        self.entry_element_name.grid(row=3, column=0, pady=(0, 10), sticky="ew")
 
         # Element Path
-        self.lbl_element_path = ctk.CTkLabel(self.frame_files, text="Element Path (optional)", font=("Arial", 10))
-        self.lbl_element_path.grid(row=5, column=0, columnspan=2, sticky="w")
+        self.lbl_element_path = ctk.CTkLabel(self.files_left, text="Element Path", font=("Arial", 10))
+        self.lbl_element_path.grid(row=4, column=0, sticky="w")
+        self.entry_element_path = ctk.CTkEntry(self.files_left, placeholder_text="Element Path", width=300)
+        self.entry_element_path.grid(row=5, column=0, pady=(0, 10), sticky="ew")
+
+        # Local Path Config
+        self.lbl_local_path = ctk.CTkLabel(self.files_left, text="Local Path (Original, Preview, etc.)", font=("Arial", 10))
+        self.lbl_local_path.grid(row=6, column=0, sticky="w")
+        self.entry_local_path = ctk.CTkEntry(self.files_left, placeholder_text="Local Path", width=300)
+        self.entry_local_path.grid(row=7, column=0, pady=(0, 10), sticky="ew")
         
-        self.entry_element_path = ctk.CTkEntry(self.frame_files, placeholder_text="Element Path", width=300)
-        self.entry_element_path.insert(0, r"C:\Files\Project\local DDCM\Elements")
-        self.entry_element_path.grid(row=6, column=0, columnspan=2, pady=(0, 10), sticky="ew")
+        # Remote Path Config
+        self.lbl_remote_path = ctk.CTkLabel(self.files_left, text="Remote Path (4000x4000, Sticker Set)", font=("Arial", 10))
+        self.lbl_remote_path.grid(row=8, column=0, sticky="w")
+        self.entry_remote_path = ctk.CTkEntry(self.files_left, placeholder_text="Remote Path", width=300)
+        self.entry_remote_path.grid(row=9, column=0, pady=(0, 10), sticky="ew")
 
-        # Path 1 Config
-        self.lbl_path1 = ctk.CTkLabel(self.frame_files, text="Path 1 (Original, Preview, etc.)", font=("Arial", 10))
-        self.lbl_path1.grid(row=7, column=0, columnspan=2, sticky="w")
-        
-        self.entry_path1 = ctk.CTkEntry(self.frame_files, placeholder_text="Path 1", width=300)
-        self.entry_path1.insert(0, r"C:\Files\Project\local DDCM")
-        self.entry_path1.grid(row=8, column=0, columnspan=2, pady=(0, 10), sticky="ew")
-        
-        # Path 2 Config
-        self.lbl_path2 = ctk.CTkLabel(self.frame_files, text="Path 2 (4000x4000, Sticker Set)", font=("Arial", 10))
-        self.lbl_path2.grid(row=9, column=0, columnspan=2, sticky="w")
+        # Set as Default Button
+        self.btn_set_default = ctk.CTkButton(self.files_left, text="Set Paths as Default", width=140, command=self.action_save_defaults, fg_color="#5D6D7E")
+        self.btn_set_default.grid(row=10, column=0, pady=(5, 10), sticky="w")
 
-        self.entry_path2 = ctk.CTkEntry(self.frame_files, placeholder_text="Path 2", width=300)
-        self.entry_path2.insert(0, r"G:\My Drive\Projects\DDCM\Cliparts DDCM")
-        self.entry_path2.grid(row=10, column=0, columnspan=2, pady=(0, 10), sticky="ew")
+        # --- RIGHT SIDE: Actions ---
+        self.files_right = ctk.CTkFrame(self.files_container, fg_color="transparent")
+        self.files_right.grid(row=0, column=1, sticky="n")
 
-        self.btn_create_folders = ctk.CTkButton(self.frame_files, text="Create Folders", width=140, command=self.action_create_folders, fg_color="#27AE60")
-        self.btn_create_folders.grid(row=11, column=0, columnspan=2, pady=(10, 0), sticky="w")
-        self.lbl_desc_create = ctk.CTkLabel(self.frame_files, text="สร้างโฟลเดอร์หลักและโฟลเดอร์ย่อย", font=("Arial", 10))
-        self.lbl_desc_create.grid(row=12, column=0, columnspan=2, pady=(0, 5), sticky="w")
+        self.btn_create_folders = ctk.CTkButton(self.files_right, text="Create Folders", width=140, command=self.action_create_folders, fg_color="#27AE60")
+        self.btn_create_folders.grid(row=0, column=0, pady=(0, 0), sticky="w")
+        self.lbl_desc_create = ctk.CTkLabel(self.files_right, text="สร้างโฟลเดอร์ที่ Local และ Remote โดยจะมีโฟลเดอร์ที่จำเป็นสำหรับแต่ละฝั่ง เช่น 4000x4000, Sticker Set เป็นต้น", font=("Arial", 10), wraplength=350, justify="left")
+        self.lbl_desc_create.grid(row=1, column=0, pady=(0, 5), sticky="w")
 
-        self.btn_copy_upscale = ctk.CTkButton(self.frame_files, text="Copy upscale img", width=140, command=self.action_copy_upscale, fg_color="#8E44AD")
-        self.btn_copy_upscale.grid(row=13, column=0, columnspan=2, pady=(5, 0), sticky="w")
-        self.lbl_desc_copy_upscale = ctk.CTkLabel(self.frame_files, text="คัดลอกไฟล์จาก upscayl และ Element ไปยัง 4000x4000", font=("Arial", 10))
-        self.lbl_desc_copy_upscale.grid(row=14, column=0, columnspan=2, pady=(0, 5), sticky="w")
+        self.btn_copy_upscale = ctk.CTkButton(self.files_right, text="Copy upscale img", width=140, command=self.action_copy_upscale, fg_color="#8E44AD")
+        self.btn_copy_upscale.grid(row=2, column=0, pady=(5, 0), sticky="w")
+        self.lbl_desc_copy_upscale = ctk.CTkLabel(self.files_right, text="1. เข้าไปที่ [Local Path] > [Folder Name] > Original > upscayl_png_remacri-4x_4x เพื่อคัดลอกไฟล์มาที่ 4000x4000 และลบโฟลเดอร์ต้นทางทิ้ง\n2. เข้าไปที่ [Element Path] > [Element Name] เพื่อคัดลอกไฟล์องค์ประกอบเสริมมาวางรวมไว้ที่ 4000x4000", font=("Arial", 10), wraplength=350, justify="left")
+        self.lbl_desc_copy_upscale.grid(row=3, column=0, pady=(0, 5), sticky="w")
 
-        self.btn_local_remote = ctk.CTkButton(self.frame_files, text="Local to Remote", width=140, command=self.action_local_remote, fg_color="#3498DB")
-        self.btn_local_remote.grid(row=15, column=0, columnspan=2, pady=(5, 0), sticky="w")
-        self.lbl_desc_local_remote = ctk.CTkLabel(self.frame_files, text="คัดลอก 4000x4000, Sticker Set ไป Path 2", font=("Arial", 10))
-        self.lbl_desc_local_remote.grid(row=16, column=0, columnspan=2, pady=(0, 5), sticky="w")
+        self.btn_local_remote = ctk.CTkButton(self.files_right, text="Local to Remote", width=140, command=self.action_local_remote, fg_color="#3498DB")
+        self.btn_local_remote.grid(row=4, column=0, pady=(5, 0), sticky="w")
+        self.lbl_desc_local_remote = ctk.CTkLabel(self.files_right, text="คัดลอก 4000x4000, Sticker Set ไป Remote Path", font=("Arial", 10), wraplength=350, justify="left")
+        self.lbl_desc_local_remote.grid(row=5, column=0, pady=(0, 5), sticky="w")
 
-        self.btn_unzip = ctk.CTkButton(self.frame_files, text="Unzip Downloads", width=140, command=self.action_unzip_downloads, fg_color="#FFA500")
-        self.btn_unzip.grid(row=17, column=0, columnspan=2, pady=(5, 0), sticky="w")
-        self.lbl_desc_unzip = ctk.CTkLabel(self.frame_files, text="แตกไฟล์ Zip จากโฟลเดอร์ Download", font=("Arial", 10))
-        self.lbl_desc_unzip.grid(row=18, column=0, columnspan=2, pady=(0, 10), sticky="w")
+        self.btn_unzip = ctk.CTkButton(self.files_right, text="Unzip Downloads", width=140, command=self.action_unzip_downloads, fg_color="#FFA500")
+        self.btn_unzip.grid(row=6, column=0, pady=(5, 0), sticky="w")
+        self.lbl_desc_unzip = ctk.CTkLabel(self.files_right, text="แตกไฟล์ Zip จากโฟลเดอร์ Download", font=("Arial", 10), wraplength=350, justify="left")
+        self.lbl_desc_unzip.grid(row=7, column=0, pady=(0, 10), sticky="w")
         
 
         # === COLUMN 2: Etsy and DDMC ===
@@ -173,7 +174,7 @@ class App(ctk.CTk):
         self.btn_etsy.grid(row=3, column=0, pady=20, sticky="w")
 
 
-        # === COLUMN 3: Gemini Automation (Moved Here) ===
+        # === COLUMN 3: Gemini Automation ===
         self.frame_gemini = ctk.CTkFrame(self.controls_frame, fg_color="transparent")
         self.frame_gemini.grid(row=0, column=3, padx=10, pady=10, sticky="nsew")
         self.frame_gemini.grid_columnconfigure(0, weight=1)
@@ -186,21 +187,60 @@ class App(ctk.CTk):
         self.entry_gemini_count.grid(row=1, column=0, pady=10, sticky="w")
 
         self.btn_gemini = ctk.CTkButton(self.frame_gemini, text="Gen Characters", width=120, command=self.action_gemini_gen, fg_color="#8E44AD")
-        self.btn_gemini.grid(row=1, column=0, pady=5, sticky="w")
+        self.btn_gemini.grid(row=2, column=0, pady=5, sticky="w")
 
         self.btn_gemini_elements = ctk.CTkButton(self.frame_gemini, text="Gen Elements", width=120, command=self.action_gemini_elements, fg_color="#8E44AD")
-        self.btn_gemini_elements.grid(row=2, column=0, pady=5, sticky="w")
+        self.btn_gemini_elements.grid(row=3, column=0, pady=5, sticky="w")
 
-        self.btn_download_imgs = ctk.CTkButton(self.frame_gemini, text="Download images", width=120, command=self.action_download_images, fg_color="#2E86C1") # Blue
-        self.btn_download_imgs.grid(row=3, column=0, pady=5, sticky="w")
+        self.btn_download_imgs = ctk.CTkButton(self.frame_gemini, text="Download images", width=120, command=self.action_download_images, fg_color="#2E86C1")
+        self.btn_download_imgs.grid(row=4, column=0, pady=5, sticky="w")
 
 
         # --- Status Section ---
         self.status_label = ctk.CTkLabel(self, text="Connecting...", text_color="orange")
         self.status_label.grid(row=2, column=0, pady=10)
         
-        # Auto-start connection
+        # Load Defaults and Start browser
+        self.load_defaults()
         self.start_browser_thread()
+
+    def action_save_defaults(self):
+        """Saves current paths to a config file."""
+        config = {
+            "element_path": self.entry_element_path.get().strip(),
+            "local_path": self.entry_local_path.get().strip(),
+            "remote_path": self.entry_remote_path.get().strip()
+        }
+        try:
+            with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+                json.dump(config, f, indent=4)
+            self.log("Defaults saved successfully!")
+        except Exception as e:
+            self.log(f"Error saving defaults: {e}", error=True)
+
+    def load_defaults(self):
+        """Loads paths from config file or sets system-appropriate defaults."""
+        if os.path.exists(CONFIG_FILE):
+            try:
+                with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+                    config = json.load(f)
+                    self.entry_element_path.insert(0, config.get("element_path", ""))
+                    self.entry_local_path.insert(0, config.get("local_path", ""))
+                    self.entry_remote_path.insert(0, config.get("remote_path", ""))
+                return
+            except:
+                pass
+        
+        # System defaults (Fallback)
+        if os.name == 'nt': # Windows
+            self.entry_element_path.insert(0, r"C:\Files\Project\local DDCM\Elements")
+            self.entry_local_path.insert(0, r"C:\Files\Project\local DDCM")
+            self.entry_remote_path.insert(0, r"G:\My Drive\Projects\DDCM\Cliparts DDCM")
+        else: # macOS/Linux
+            home = os.path.expanduser("~")
+            self.entry_element_path.insert(0, os.path.join(home, "Documents/DDCM/Elements"))
+            self.entry_local_path.insert(0, os.path.join(home, "Documents/DDCM"))
+            self.entry_remote_path.insert(0, "/Volumes/GoogleDrive/My Drive/Projects/DDCM/Cliparts DDCM")
 
     def action_gemini_gen(self):
         """Starts the Gemini generation process for characters."""
@@ -233,32 +273,19 @@ class App(ctk.CTk):
 
             time.sleep(1)
 
-            # 2. Scroll to TOP (to handle lazy load / find all)
+            # 2. Scroll to TOP
             self.log("Scrolling to TOP...")
-            # Try scrolling the main window and common scrollers
             self.bot.driver.execute_script("window.scrollTo(0, 0);")
-            
-            # Sometimes the scroll is on a specific element. Try widely used classes.
             scrollers = self.bot.driver.find_elements(By.CSS_SELECTOR, ".infinite-scroller, .conversation-container, main")
             for s in scrollers:
                 self.bot.driver.execute_script("arguments[0].scrollTop = 0;", s)
             
-            time.sleep(2) # Wait for load
+            time.sleep(2)
 
             # 3. Find Download Buttons
-            # Selector: download-generated-image-button > button
-            # Need to find ALL of them.
-            
-            # Since Gemini lazy loads, we might need to scroll DOWN slowly to find them all?
-            # User said "scroll to top" - assuming old items are at top and we need to start there.
-            # But if we click, we need to ensure they are in view.
-
-            # Let's find all currently visible/loaded buttons first.
             buttons = self.bot.driver.find_elements(By.CSS_SELECTOR, "download-generated-image-button > button")
-            
             if not buttons:
                 self.log("No download buttons found initially. Trying to scroll down a bit...", error=False)
-                # Maybe scroll specific amount?
                 self.bot.driver.execute_script("window.scrollTo(0, 1000);")
                 time.sleep(1)
                 buttons = self.bot.driver.find_elements(By.CSS_SELECTOR, "download-generated-image-button > button")
@@ -274,24 +301,14 @@ class App(ctk.CTk):
                 self.log(f"Downloading image {i+1}/{count}...")
                 
                 try:
-                    # Scroll into view
                     self.bot.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", btn)
                     time.sleep(0.5)
-
-                    # Click
                     try:
                         btn.click()
                     except:
                         self.bot.driver.execute_script("arguments[0].click();", btn)
                     
-                    # Smart Wait: Wait until the NEXT button is clickable (or current one if checking state)
-                    # The user said "Wait for status to return to normal".
-                    # Usually when downloading, the button might be disabled or loading.
-                    # We can check if the button itself is re-enabled/clickable.
-                    
                     try:
-                        # Wait up to 15 seconds for THIS button to be interactable again
-                        # Or perhaps just a small delay + check
                         time.sleep(1) 
                         WebDriverWait(self.bot.driver, 15).until(
                              EC.element_to_be_clickable(btn)
@@ -342,40 +359,26 @@ class App(ctk.CTk):
                 return
 
             all_prompts = []
-            results = []
-
             for name, selector in containers:
                 self.log(f"Scanning {name}...")
                 try:
-                    # Find container
                     container = WebDriverWait(self.bot.driver, 5).until(
                         EC.presence_of_element_located((By.CSS_SELECTOR, selector))
                     )
-                    
-                    # Scroll container into view
                     self.bot.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", container)
                     time.sleep(0.5)
 
-                    # Find buttons
                     buttons = container.find_elements(By.TAG_NAME, "button")
                     if not buttons:
                          buttons = container.find_elements(By.XPATH, ".//button")
                     
-                    count = len(buttons)
-                    results.append(f"{name}: {count}")
-                    
-                    if count > 0:
+                    if len(buttons) > 0:
                         for i, btn in enumerate(buttons):
                             try:
-                                # Scroll to button (fast)
                                 self.bot.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", btn)
-                                
-                                # Click
                                 try: btn.click()
                                 except: self.bot.driver.execute_script("arguments[0].click();", btn)
                                 time.sleep(0.1)
-
-                                # Get text
                                 try:
                                     text = self.clipboard_get()
                                     if text: all_prompts.append(text)
@@ -384,7 +387,6 @@ class App(ctk.CTk):
                                 print(f"Error btn {i}: {e}")
                 except Exception as e:
                     self.log(f"Error {name}: {e}", error=True)
-                    results.append(f"{name}: Error")
 
             self.log(f"Collected {len(all_prompts)} prompts. Switching to Gemini...")
             
@@ -393,36 +395,28 @@ class App(ctk.CTk):
                 return
 
             # 3. Switch to Gemini
-            gemini_url = "gemini.google.com/app"
             found_gemini = False
             for handle in self.bot.driver.window_handles:
                 self.bot.driver.switch_to.window(handle)
-                if gemini_url in self.bot.driver.current_url:
+                if "gemini.google.com/app" in self.bot.driver.current_url:
                     found_gemini = True
                     break
             
             if not found_gemini:
-                self.log("Error: Gemini tab not found! Please open it.", error=True)
+                self.log("Error: Gemini tab not found!", error=True)
                 return
 
             time.sleep(1)
 
             # 4. Input Prompts loop
             input_box_xpath = "//div[contains(@class, 'ql-editor') and @contenteditable='true']"
-            
             for i, prompt in enumerate(all_prompts):
                 self.log(f"Processing Gemini {i+1}/{len(all_prompts)}...")
-                
                 try:
-                    # Find Input Box
                     input_box = WebDriverWait(self.bot.driver, 10).until(
                         EC.presence_of_element_located((By.XPATH, input_box_xpath))
                     )
-                    
-                    # Click to focus
                     input_box.click()
-                    
-                    # Paste text
                     input_box.send_keys(prompt)
                     time.sleep(1)
                     input_box.send_keys(Keys.ENTER)
@@ -430,23 +424,14 @@ class App(ctk.CTk):
                     self.log(f"  -> Sent prompt {i+1}. Waiting for generation...")
                     time.sleep(2)
 
-                    # Check for Stop Icon
                     stop_icon_xpath = "//mat-icon[contains(@data-mat-icon-name, 'stop') or @fonticon='stop']"
-                    
-                    # Wait loop: check if stop icon is present
                     while True:
                         try:
-                            # Try to find the stop button with a short timeout
                             self.bot.driver.find_element(By.XPATH, stop_icon_xpath)
-                            # If found, it means it's still generating
                             time.sleep(1)
                         except:
-                            # If NOT found (NoSuchElementException), it means generation finished
                             self.log("  -> Generation finished.")
                             break
-                    
-                    # Proceed to next variable immediately
-
                 except Exception as e:
                     self.log(f"Error in Gemini loop: {e}", error=True)
                     return
@@ -455,14 +440,11 @@ class App(ctk.CTk):
 
         except Exception as e:
             self.log(f"Critical Error: {e}", error=True)
-            import traceback
-            traceback.print_exc()
 
     def log(self, message, error=False):
-        color = "red" if error else "SystemButtonFace" # Use default or specific color
+        color = "red" if error else "SystemButtonFace"
         if "SystemButtonFace" == color:
              color = "gray"
-        
         self.status_label.configure(text=message, text_color=color)
         print(message)
 
@@ -471,7 +453,6 @@ class App(ctk.CTk):
         threading.Thread(target=self._start_browser_task).start()
 
     def _start_browser_task(self):
-        # Changed to True to connect to existing browser
         success = self.bot.start_browser(attach=True)
         if success:
             self.log("Connected to Browser.")
@@ -479,43 +460,24 @@ class App(ctk.CTk):
         else:
             self.log("Failed: Please Close ALL Chrome Windows & Restart App", error=True)
 
-    # Removed open_target_url method as it's no longer used via button
-
     def action_export_png(self):
         """Defines the sequence for Export PNG on Canva."""
         self.log("Running Export PNG...")
-        
-        # 0. Ensure we are on Canva
         if not self.bot.switch_to_tab_containing("canva.com"):
             self.log("Error: 'canva.com' is not open in any tab.")
             return
 
-        time.sleep(1) # Brief pause after switch
-
-        # Get user page range
+        time.sleep(1)
         pages = self.entry_png_pages.get().strip() or "1-4"
-
-        # Define steps with your specific XPaths
         steps = [
-            # Step 1: Rename Design (New!)
             ("Rename Design to 'png'", "//input[@aria-label='Design title']", "png"),
-
             ("Click Share/Export", "//button[.//span[text()='Share']]"),
             ("Click Download", "//button[@aria-label='Download']"),
             ("Click File Type", "//button[@aria-label='File type']"),
             ("Select PNG", "//li[@role='option']//div[contains(text(), 'PNG')]"),
-            # Step 5: Set Size (Input Box next to Slider)
-            # Use the text input which is more reliable than the slider
             ("Set Size to 1", "//input[@role='spinbutton']", "1"), 
-            
-            # Step 6: Ensure Transparent background is CHECKED
-            # Force click as requested (assuming it starts unchecked)
             ("Click Transparent", "//label[.//p[contains(text(), 'Transparent background')]]"),
-            
-            # Step 7: Set Pages
             (f"Set Pages to {pages}", "//input[@placeholder='Select pages']", pages),
-            
-            # Step 8: Click Final Download Button
             ("Final Download", "//button[@type='submit'][.//span[contains(text(), 'Download')]]")
         ]
 
@@ -529,34 +491,20 @@ class App(ctk.CTk):
     def action_export_jpg(self):
         """Defines the sequence for Export JPG on Canva."""
         self.log("Running Export JPG...")
-        
-        # 0. Ensure we are on Canva
         if not self.bot.switch_to_tab_containing("canva.com"):
             self.log("Error: 'canva.com' is not open in any tab.")
             return False
 
-        time.sleep(1) # Brief pause after switch
-
-        # Get user page range
+        time.sleep(1)
         pages = self.entry_jpg_pages.get().strip() or "6-9"
-
-        # Define steps for JPG
         steps = [
-            # Step 1: Rename Design (New!)
             ("Rename Design to 'jpg'", "//input[@aria-label='Design title']", "jpg"),
-
             ("Click Share/Export", "//button[.//span[text()='Share']]"),
             ("Click Download", "//button[@aria-label='Download']"),
             ("Click File Type", "//button[@aria-label='File type']"),
             ("Select JPG", "//li[@role='option']//div[contains(text(), 'JPG')]"),
-            
-            # Step 5: Set Size to 0.5
             ("Set Size to 0.5", "//input[@role='spinbutton']", "0.5"),
-            
-            # Step 6: Set Pages
             (f"Set Pages to {pages}", "//input[@placeholder='Select pages']", pages),
-            
-            # Step 7: Click Final Download Button
             ("Final Download", "//button[@type='submit'][.//span[contains(text(), 'Download')]]")
         ]
 
@@ -570,31 +518,19 @@ class App(ctk.CTk):
     def action_export_pdf(self):
         """Defines the sequence for Export PDF (Standard) on Canva."""
         self.log("Running Export PDF...")
-        
-        # 0. Ensure we are on Canva
         if not self.bot.switch_to_tab_containing("canva.com"):
             self.log("Error: 'canva.com' is not open in any tab.")
             return False
 
-        time.sleep(1) # Brief pause after switch
-
-        # Get user page range
+        time.sleep(1)
         pages = self.entry_pdf_pages.get().strip() or "10"
-
-        # Define steps for PDF
         steps = [
-            # Step 1: Rename Design (New!)
             ("Rename Design to 'pdf_for_downloading'", "//input[@aria-label='Design title']", "pdf_for_downloading"),
-
             ("Click Share/Export", "//button[.//span[text()='Share']]"),
             ("Click Download", "//button[@aria-label='Download']"),
             ("Click File Type", "//button[@aria-label='File type']"),
             ("Select PDF Standard", "//li[@role='option']//div[contains(text(), 'PDF Standard')]"),
-            
-            # Step 5: Set Pages
             (f"Set Pages to {pages}", "//input[@placeholder='Select pages']", pages),
-            
-            # Step 6: Click Final Download Button
             ("Final Download", "//button[@type='submit'][.//span[contains(text(), 'Download')]]")
         ]
 
@@ -608,26 +544,15 @@ class App(ctk.CTk):
     def action_export_all(self):
         """Runs PNG, JPG, and PDF export sequences."""
         self.log("Starting ALL Exports (PNG + JPG + PDF)...")
-        
-        # Run PNG Export
         if not self.action_export_png():
-             self.log("ABORTING ALL EXPORTS due to PNG failure.", error=True)
              return
 
-        self.log("Waiting 8s for PNG cleanup...")
         time.sleep(8) 
-        
-        # Run JPG Export
         if not self.action_export_jpg():
-             self.log("ABORTING ALL EXPORTS due to JPG failure.", error=True)
              return
 
-        self.log("Waiting 8s for JPG cleanup...")
         time.sleep(8)
-        
-        # Run PDF Export
         if not self.action_export_pdf():
-             self.log("ABORTING ALL EXPORTS due to PDF failure.", error=True)
              return
         
         self.log("ALL Exports Completed Successfully!")
@@ -635,19 +560,18 @@ class App(ctk.CTk):
     def action_create_folders(self):
         """Creates folder structures based on user input."""
         folder_name = self.entry_folder_name.get().strip()
-        
         if not folder_name:
              self.log("Error: Folder Name is required.", error=True)
              return
 
         configs = [
             {
-                "path": self.entry_path1.get().strip(),
+                "path": self.entry_local_path.get().strip(),
                 "folder": folder_name,
                 "subfolders": ["4000x4000", "Download file", "Original", "Preview", "Sticker Set"]
             },
             {
-                "path": self.entry_path2.get().strip(),
+                "path": self.entry_remote_path.get().strip(),
                 "folder": folder_name,
                 "subfolders": ["4000x4000", "Sticker Set"]
             }
@@ -657,37 +581,32 @@ class App(ctk.CTk):
             base_path = config["path"]
             folder_name = config["folder"]
             subfolders = config["subfolders"]
-
             if not base_path or not folder_name:
                 continue
 
             full_path = os.path.join(base_path, folder_name)
-            
             try:
                 if os.path.exists(full_path):
-                    self.log(f"Path {i+1}: '{folder_name}' already exists. Skipping.")
+                    self.log(f"'{folder_name}' already exists in Path {i+1}. Skipping.")
                 else:
                     os.makedirs(full_path)
-                    self.log(f"Path {i+1}: Created '{folder_name}'.")
-                    
-                    # Create subfolders
                     for sub in subfolders:
                         os.makedirs(os.path.join(full_path, sub))
-                    self.log(f"Path {i+1}: Created {len(subfolders)} subfolders.")
+                    self.log(f"Created '{folder_name}' and subfolders in Path {i+1}.")
             except Exception as e:
                 self.log(f"Error creating folders for Path {i+1}: {e}", error=True)
 
     def action_copy_upscale(self):
-        """Copies files from upscayl_png_remacri-4x_4x and element folder to 4000x4000 in Path 1."""
+        """Copies files from upscayl folder to 4000x4000 in Local Path."""
         folder_name = self.entry_folder_name.get().strip()
-        path1 = self.entry_path1.get().strip()
+        local_path = self.entry_local_path.get().strip()
         
-        if not folder_name or not path1:
-            self.log("Error: Folder Name and Path 1 are required.", error=True)
+        if not folder_name or not local_path:
+            self.log("Error: Folder Name and Local Path are required.", error=True)
             return
 
-        dest_dir = os.path.join(path1, folder_name, "4000x4000")
-        src_dir = os.path.join(path1, folder_name, "Original", "upscayl_png_remacri-4x_4x")
+        dest_dir = os.path.join(local_path, folder_name, "4000x4000")
+        src_dir = os.path.join(local_path, folder_name, "Original", "upscayl_png_remacri-4x_4x")
         
         if os.path.exists(src_dir):
             os.makedirs(dest_dir, exist_ok=True)
@@ -700,15 +619,12 @@ class App(ctk.CTk):
                         shutil.copy2(s, d)
                         count += 1
                 shutil.rmtree(src_dir)
-                self.log(f"Copied {count} files to 4000x4000 and deleted original folder.")
+                self.log(f"Copied {count} files to 4000x4000.")
             except Exception as e:
                 self.log(f"Error copying upscale images: {e}", error=True)
-        else:
-            self.log(f"Warning: {src_dir} not found. Skipping upscale copy.", error=False)
 
         element_name = self.entry_element_name.get().strip()
         element_path = self.entry_element_path.get().strip()
-        
         if element_name and element_path:
             element_src_dir = os.path.join(element_path, element_name)
             if os.path.exists(element_src_dir):
@@ -721,69 +637,51 @@ class App(ctk.CTk):
                         if os.path.isfile(s):
                             shutil.copy2(s, d)
                             elem_count += 1
-                    self.log(f"Copied {elem_count} element files to 4000x4000.")
+                    self.log(f"Copied {elem_count} element files.")
                 except Exception as e:
-                    self.log(f"Error copying element files: {e}", error=True)
-            else:
-                self.log(f"Warning: Element path {element_src_dir} not found.", error=True)
+                    self.log(f"Error copying elements: {e}", error=True)
 
     def action_local_remote(self):
-        """Copies 4000x4000 and Sticker Set folders from Path 1 to Path 2."""
+        """Copies folders from Local Path to Remote Path."""
         folder_name = self.entry_folder_name.get().strip()
-        path1 = self.entry_path1.get().strip()
-        path2 = self.entry_path2.get().strip()
+        local_path = self.entry_local_path.get().strip()
+        remote_path = self.entry_remote_path.get().strip()
         
-        if not folder_name or not path1 or not path2:
-            self.log("Error: Folder Name, Path 1 and Path 2 are required.", error=True)
+        if not folder_name or not local_path or not remote_path:
+            self.log("Error: All paths required.", error=True)
             return
             
         folders_to_copy = ["4000x4000", "Sticker Set"]
         total_copied = 0
-        
         try:
             for subfolder in folders_to_copy:
-                src_dir = os.path.join(path1, folder_name, subfolder)
-                dest_dir = os.path.join(path2, folder_name, subfolder)
-                
+                src_dir = os.path.join(local_path, folder_name, subfolder)
+                dest_dir = os.path.join(remote_path, folder_name, subfolder)
                 if not os.path.exists(src_dir):
-                    self.log(f"Warning: {src_dir} not found.", error=False)
                     continue
-
                 os.makedirs(dest_dir, exist_ok=True)
-                
-                count = 0
                 for item in os.listdir(src_dir):
                     s = os.path.join(src_dir, item)
                     d = os.path.join(dest_dir, item)
                     if os.path.isfile(s):
                         shutil.copy2(s, d)
-                        count += 1
-                total_copied += count
-            
-            self.log(f"Copied {total_copied} files to Path 2.")
+                        total_copied += 1
+            self.log(f"Copied {total_copied} files to Remote Path.")
         except Exception as e:
             self.log(f"Error copying to remote: {e}", error=True)
 
     def action_etsy_listing(self):
-        """Extracts data from DDCM and populates the Etsy listing creator with user inputs."""
+        """Extracts data from DDCM and populates Etsy."""
         self.log("Starting Etsy Listing process...")
-        
-        # 0. Get user inputs from GUI and validate
         user_primary = self.entry_primary.get().strip()
         user_secondary = self.entry_secondary.get().strip()
-        # Price and Section are auto-extracted now, so setting to None for initial logic
-        user_price = None 
-        user_section = None
-
         if not all([user_primary, user_secondary]):
-            self.log("Error: Colors must be filled!", error=True)
+            self.log("Error: Colors required!", error=True)
             return
 
-        # 1. Extract from DDCM
         if not self.bot.switch_to_tab_containing("ddcm.litarandfriends.uk"):
-            self.bot.driver.execute_script("window.open('https://ddcm.litarandfriends.uk', '_blank');")
+            self.bot.driver.get("https://ddcm.litarandfriends.uk")
             time.sleep(2)
-            self.bot.switch_to_tab_containing("ddcm.litarandfriends.uk")
 
         ddcm_fields = [
             ("name", "/html/body/main/div[4]/div/div[2]/div[2]/div/div/div"),
@@ -795,61 +693,20 @@ class App(ctk.CTk):
         ]
 
         extracted_data = {}
-        # Simple scroll to top to ensure we find elements if lazy loaded? usually not needed for hardcoded xpaths
-        
         for field_name, xpath in ddcm_fields:
             try:
-                # Use a smaller timeout for optional fields
-                timeout = 5
-                element = WebDriverWait(self.bot.driver, timeout).until(
-                    EC.presence_of_element_located((By.XPATH, xpath))
-                )
-                self.bot.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", element)
-                time.sleep(0.2)
-                
-                text = element.text.strip()
-                extracted_data[field_name] = text
-                self.log(f"Extracted {field_name}: {text[:30]}...")
-            except Exception:
-                self.log(f"Error: Could not extract '{field_name}' from DDCM. Stopping.", error=True)
+                element = WebDriverWait(self.bot.driver, 5).until(EC.presence_of_element_located((By.XPATH, xpath)))
+                extracted_data[field_name] = element.text.strip()
+            except:
+                self.log(f"Extraction error: {field_name}", error=True)
                 return
 
-        self.log("Extracted all data from DDCM.")
-        
-        # Prepare variables from extraction
-        # Price from DDCM (fallback to "5.99" if Failed)
-        user_price = extracted_data.get('price', '5.99')
-        if not user_price: user_price = "5.99"
-        
-        # Shop Section from DDCM Theme (fallback to "General" if Failed)
-        user_section = extracted_data.get('theme', 'General')
-        if not user_section: user_section = "General"
+        user_price = extracted_data.get('price', '5.99') or "5.99"
+        user_section = extracted_data.get('theme', 'General') or "General"
 
-        if not all([user_primary, user_secondary, user_price, user_section]):
-            self.log("Error: All 4 fields (Colors, Price, Section) must be filled!", error=True)
-            return
-
-        # 2. Go to Etsy (Force New Tab)
-        etsy_create_url = "https://www.etsy.com/your/shops/me/listing-editor/create"
-        self.log("Opening new Etsy Create Listing tab...")
-        
-        # Open NEW tab using Selenium native method
         self.bot.driver.switch_to.new_window('tab')
-        self.bot.driver.get(etsy_create_url)
+        self.bot.driver.get("https://www.etsy.com/your/shops/me/listing-editor/create")
         
-        # Switch to the NEWly opened tab (last handle)
-        self.bot.driver.switch_to.window(self.bot.driver.window_handles[-1])
-        self.log("Opened and switched to new Etsy tab.")
-        
-        # improved wait for url
-        try:
-             WebDriverWait(self.bot.driver, 15).until(lambda d: "etsy.com" in d.current_url)
-        except:
-             self.log("Warning: Etsy URL loading timed out, but proceeding...", error=False)
-        
-        time.sleep(2)
-
-        # 3. Etsy Setup Steps (Radio buttons, Category, etc.)
         setup_steps = [
             ("Select Category: Clip Art", "//div[contains(@class, 'le-category-action-item') and .//h2[contains(text(), 'Clip Art')]]"),
             ("Click Continue (1)", "//button[contains(@class, 'wt-btn--primary') and text()='Continue']"),
@@ -863,298 +720,113 @@ class App(ctk.CTk):
 
         for name, xpath, *value in setup_steps:
             try:
-                element = WebDriverWait(self.bot.driver, 10).until(
-                    EC.presence_of_element_located((By.XPATH, xpath))
-                )
-                # Auto-scroll to element
+                element = WebDriverWait(self.bot.driver, 10).until(EC.presence_of_element_located((By.XPATH, xpath)))
                 self.bot.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", element)
                 time.sleep(0.3)
-
-                if value: # Dropdown select
+                if value:
                     from selenium.webdriver.support.ui import Select
                     Select(element).select_by_value(value[0])
-                else: # Click
+                else:
                     try: element.click()
                     except: self.bot.driver.execute_script("arguments[0].click();", element)
                 time.sleep(0.5)
-            except Exception:
-                self.log(f"Error: Etsy Setup '{name}' failed within 10s.", error=True)
+            except:
+                self.log(f"Etsy Setup Error: {name}", error=True)
                 return
 
-        self.log("Etsy Setup successful. Waiting 1s to settle...")
-        time.sleep(1)
-
-        # 4. Etsy Content Filling (Pasting Variables)
         content_steps = [
-            # 1. Title
             ("Paste Title", "//textarea[@id='listing-title-input']", extracted_data.get('name', '')),
-            # 2. Description
             ("Paste Description", "//textarea[@id='listing-description-textarea' or @name='description']", extracted_data.get('description', '')),
-            # 3. Price (Using Extracted Data)
             ("Paste Price", "//input[@id='listing-price-input']", user_price),
-            # 4. Quantity
             ("Paste Quantity", "//input[@id='listing-quantity-input']", "999"),
-            
-            # 5. Scrapbooking (Craft type)
             ("Click Topic Search", "//input[@placeholder='Type to search…' and contains(@aria-describedby, 'attribute-0')]"),
             ("Check Scrapbooking Box", "//label[contains(text(), 'Scrapbooking')]"),
-            ("Press ESC", "SPECIAL_ESC"), # Close scrapbooking dropdown
-            
-            # 6. Primary color (Verified Absolute XPath)
+            ("Press ESC", "SPECIAL_ESC"),
             ("Paste Primary Color", "/html/body/div[3]/div/div[1]/main/div/div/form/div/div[3]/div/div[4]/div/div/div[3]/div[3]/div/div/div/div/div[1]/input", user_primary),
             ("Select Primary Color", "//button[@role='menuitemradio']//p[contains(text(), '" + user_primary + "')]"),
-            
-            # 7. Secondary color
             ("Paste Secondary Color", "/html/body/div[3]/div/div[1]/main/div/div/form/div/div[3]/div/div[4]/div/div/div[3]/div[4]/div/div/div/div/div[1]/input", user_secondary),
             ("Select Secondary Color", "//button[@role='menuitemradio']//p[contains(text(), '" + user_secondary + "')]"),
-            
-            # 8. Tag
             ("Paste Tag", "//input[@id='listing-tags-input']", extracted_data.get('tag', '')),
             ("Click Add Tag", "//button[@id='listing-tags-button']"),
-            
-            # 9. Material
             ("Paste Material", "//input[@id='listing-materials-input']", extracted_data.get('material', '')),
             ("Click Add Material", "//button[@id='listing-materials-button']"),
-            
-            # 10. Shop Section (Using Extracted Data)
             ("Select Shop Section", "//select[@id='shop-section-select']", user_section)
         ]
 
         for step in content_steps:
             name, xpath = step[0], step[1]
             try:
-                # Handle special key actions
                 if xpath == "SPECIAL_ESC":
-                    self.log(f"Etsy Action: Click outside to close Dropdown")
-                    # Click body to close dropdown naturally
                     self.bot.driver.find_element(By.TAG_NAME, "body").click()
-                    time.sleep(0.5)
                     continue
-
-                # Use element_to_be_clickable for input fields
-                element = WebDriverWait(self.bot.driver, 10).until(
-                    EC.presence_of_element_located((By.XPATH, xpath))
-                )
-                
-                # Strict scroll to ensure visibility
-                self.bot.driver.execute_script("arguments[0].scrollIntoView({block: 'center', inline: 'nearest'});", element)
+                element = WebDriverWait(self.bot.driver, 10).until(EC.presence_of_element_located((By.XPATH, xpath)))
+                self.bot.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", element)
                 time.sleep(0.5)
-
-                self.log(f"Etsy Filling: {name}")
-                
-                # If there's a third value, it's text to input or dropdown value
                 if len(step) == 3:
                     text_value = step[2]
                     if element.tag_name == "select":
                         from selenium.webdriver.support.ui import Select
-                        s = Select(element)
-                        try: s.select_by_visible_text(text_value)
-                        except: s.select_by_value(text_value)
+                        Select(element).select_by_visible_text(text_value)
                     else:
-                        try:
-                            element.click()
-                        except:
-                            self.bot.driver.execute_script("arguments[0].click();", element)
-                        
-                        # Special handling for Craft type search / Colors which need 'typing' for the dropdown to appear
-                        # OR if it's a field that doesn't like JS injection for focus
-                        if "placeholder='Type to search…'" in xpath:
-                            element.send_keys(Keys.CONTROL + "a")
-                            element.send_keys(Keys.DELETE)
-                            element.send_keys(text_value)
-                        else:
-                            # USE JAVASCRIPT TO SET VALUE (To support Emojis and avoid BMP Error)
-                            self.bot.driver.execute_script("""
-                                var el = arguments[0];
-                                var val = arguments[1];
-                                el.value = val;
-                                // Trigger React/Modern Framework events
-                                el.dispatchEvent(new Event('input', { bubbles: true }));
-                                el.dispatchEvent(new Event('change', { bubbles: true }));
-                            """, element, text_value)
-                        
-                        time.sleep(0.5)
-                else: # Just a click (Native click for better focus)
-                    try: 
-                        # For checkboxes/labels, native click is better for focus
                         element.click()
-                    except: 
-                        self.bot.driver.execute_script("arguments[0].click();", element)
-                
+                        if "placeholder='Type to search…'" in xpath:
+                            element.send_keys(Keys.CONTROL + "a", Keys.DELETE, text_value)
+                        else:
+                            self.bot.driver.execute_script("arguments[0].value = arguments[1]; arguments[0].dispatchEvent(new Event('input', { bubbles: true }));", element, text_value)
+                else:
+                    try: element.click()
+                    except: self.bot.driver.execute_script("arguments[0].click();", element)
                 time.sleep(0.5)
-            except Exception as e:
-                # Log the actual error for debugging
-                error_msg = str(e).split('\n')[0] # Get first line of error
-                self.log(f"Error: Etsy Content '{name}' fail. ({error_msg})", error=True)
+            except:
+                self.log(f"Etsy Content Error: {name}", error=True)
                 return
-
         self.log("Etsy Listing populated successfully!")
 
     def action_unzip_downloads(self):
-        """Unzips all .zip files in the Downloads folder."""
-        self.log("Starting Unzip process in Downloads folder...")
-        
+        """Unzips zip files in Downloads."""
+        self.log("Starting Unzip...")
         try:
             download_path = os.path.join(os.path.expanduser("~"), "Downloads")
-            if not os.path.exists(download_path):
-                 self.log(f"Error: Downloads folder not found at {download_path}", error=True)
-                 return
-
             zip_files = [f for f in os.listdir(download_path) if f.lower().endswith('.zip')]
-            
-            if not zip_files:
-                self.log("No .zip files found in Downloads.")
-                return
-
-            self.log(f"Found {len(zip_files)} zip files. Extracting...")
-            
-            count = 0
             for zip_filename in zip_files:
                 zip_path = os.path.join(download_path, zip_filename)
-                # Create a folder with the same name as the zip file
-                extract_folder_name = os.path.splitext(zip_filename)[0]
-                extract_path = os.path.join(download_path, extract_folder_name)
-                
-                try:
-                    with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-                        # Create directory if it doesn't exist
-                        if not os.path.exists(extract_path):
-                            os.makedirs(extract_path)
-                        zip_ref.extractall(extract_path)
-                    
-                    self.log(f"Extracted: {zip_filename}")
-                    count += 1
-                except Exception as e:
-                    self.log(f"Failed to extract {zip_filename}: {e}", error=True)
-            
-            self.log(f"Unzip Complete! Extracted {count} files.")
-
+                extract_path = os.path.join(download_path, os.path.splitext(zip_filename)[0])
+                with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+                    os.makedirs(extract_path, exist_ok=True)
+                    zip_ref.extractall(extract_path)
+            self.log("Unzip Complete!")
         except Exception as e:
-             self.log(f"Critical Error: {e}", error=True)
-
-
+             self.log(f"Unzip Error: {e}", error=True)
 
     def _execute_steps(self, steps):
-        """
-        Helper to execute a list of steps with special handling.
-        Returns: True if all steps succeeded, False if any failed.
-        """
         for step in steps:
-            name = step[0]
-            xpath = step[1]
-            
-            if len(step) == 3: # It's an input/value task
-                value = step[2]
-                self.log(f"Step: {name}")
-                
-                try:
-                    # Special handling for Page Selector
+            name, xpath = step[0], step[1]
+            try:
+                if len(step) == 3:
+                    value = step[2]
+                    element = self.bot.driver.find_element(By.XPATH, xpath)
                     if "placeholder='Select pages'" in xpath:
-                         element = self.bot.driver.find_element(By.XPATH, xpath)
                          element.click()
-                         time.sleep(0.5)
-                         element.send_keys(Keys.CONTROL + "a")
-                         element.send_keys(Keys.DELETE)
-                         time.sleep(0.5)
-                         element.send_keys(value)
-                         time.sleep(0.5)
-                         element.send_keys(Keys.TAB)
-                    
-                    # Special handling for Size Input (Spinbutton)
+                         element.send_keys(Keys.CONTROL + "a", Keys.DELETE, value, Keys.TAB)
                     elif "role='spinbutton'" in xpath:
-                         element = self.bot.driver.find_element(By.XPATH, xpath)
-                         element.send_keys(Keys.CONTROL + "a")
-                         element.send_keys(Keys.DELETE)
-                         time.sleep(0.2)
-                         element.send_keys(value)
-                         time.sleep(0.5)
-                         element.send_keys(Keys.ENTER) # Confirm value
-                         time.sleep(1.0) # Extra wait for UI
-                         
-                    # Special handling for Rename (Design title) - WITH 20s TIMEOUT
+                         element.send_keys(Keys.CONTROL + "a", Keys.DELETE, value, Keys.ENTER)
                     elif "aria-label='Design title'" in xpath:
-                         try:
-                             # Wait up to 20 seconds for the rename box to be present and interactable
-                             element = WebDriverWait(self.bot.driver, 20).until(
-                                 EC.element_to_be_clickable((By.XPATH, xpath))
-                             )
-                             # Click TWICE to ensure focus (bypass popups)
-                             element.click()
-                             time.sleep(0.5)
-                             element.click()
-                             
-                             # Clear existing name
-                             element.send_keys(Keys.CONTROL + "a")
-                             element.send_keys(Keys.DELETE)
-                             time.sleep(0.2)
-                             # Set new name
-                             element.send_keys(value)
-                             time.sleep(0.5)
-                             # Press Enter
-                             element.send_keys(Keys.ENTER)
-                             time.sleep(1.0) # Wait for save
-                         except Exception as e:
-                             self.log(f"Error: Could not find Rename Button within 20s. Stopping. ({e})", error=True)
-                             return False
-
-                    else: # Normal input
-                        if not self.bot.input_text(xpath, value, timeout=10):
-                            self.log(f"Failed at step: {name}")
-                            return False
-                            
-                except Exception as e:
-                    self.log(f"Error in step '{name}': {e}", error=True)
-                    return False
-
-            else: # Click task
-                self.log(f"Step: {name}")
-                # Wait + Scroll for Canva clicks too
-                try:
-                    element = WebDriverWait(self.bot.driver, 10).until(
-                        EC.presence_of_element_located((By.XPATH, xpath))
-                    )
+                         element = WebDriverWait(self.bot.driver, 20).until(EC.element_to_be_clickable((By.XPATH, xpath)))
+                         element.click()
+                         element.send_keys(Keys.CONTROL + "a", Keys.DELETE, value, Keys.ENTER)
+                    else:
+                        if not self.bot.input_text(xpath, value): return False
+                else:
+                    element = WebDriverWait(self.bot.driver, 10).until(EC.presence_of_element_located((By.XPATH, xpath)))
                     self.bot.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", element)
-                    time.sleep(0.3)
-                    
                     if not self.bot.click_element(xpath, timeout=2):
-                         # Fallback to JS click if normal click fails
                          self.bot.driver.execute_script("arguments[0].click();", element)
-                except:
-                    self.log(f"Failed at step: {name}")
-                    return False
-            
-            time.sleep(0.5)
-            
+                time.sleep(0.5)
+            except:
+                return False
         return True
 
-    def debug_check_tabs(self):
-        """Prints all open tabs to debug."""
-        self.log("Checking all open tabs...")
-        if not self.bot.driver:
-            self.log("Browser not connected.")
-            return
-
-        found_canva = False
-        original_handle = self.bot.driver.current_window_handle
-        
-        for handle in self.bot.driver.window_handles:
-            self.bot.driver.switch_to.window(handle)
-            url = self.bot.driver.current_url
-            title = self.bot.driver.title
-            print(f"Tab: {title} | URL: {url}")
-            if "canva.com" in url:
-                found_canva = True
-        
-        self.bot.driver.switch_to.window(original_handle)
-        
-        if found_canva:
-            self.log("Found Canva! System should work.")
-        else:
-            self.log("Canva NOT found in any tab.", error=True)
-
 if __name__ == "__main__":
-    ctk.set_appearance_mode("System")  # Modes: "System" (standard), "Dark", "Light"
-    ctk.set_default_color_theme("blue")  # Themes: "blue" (standard), "green", "dark-blue"
-    
+    ctk.set_appearance_mode("System")
     app = App()
     app.mainloop()
