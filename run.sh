@@ -44,8 +44,8 @@ if [ "$LAUNCH_CHROME" = true ]; then
         exit 1
     fi
 
-    # Launch Chrome in the background
-    "$CHROME_PATH" --remote-debugging-port=9222 --user-data-dir="$USER_DATA" "$URL1" "$URL2" "$URL3" "$URL4" &
+    # Launch Chrome independently using macOS 'open' command
+    open -na "Google Chrome" --args --remote-debugging-port=9222 --user-data-dir="$USER_DATA" "$URL1" "$URL2" "$URL3" "$URL4"
 
     echo "Waiting 5 seconds for Chrome to launch..."
     sleep 5
