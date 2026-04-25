@@ -34,13 +34,18 @@ if [ "$LAUNCH_CHROME" = true ]; then
     mkdir -p "$USER_DATA"
     CHROME_PATH="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 
+    if [ ! -f "$CHROME_PATH" ]; then
+        # Try to find Chrome if default path fails
+        CHROME_PATH=$(mdfind "kMDItemCFBundleIdentifier == 'com.google.Chrome'" | head -n 1)"/Contents/MacOS/Google Chrome"
+    fi
+
     URL1="https://www.canva.com/projects"
     URL2="https://ddcm.litarandfriends.uk"
     URL3="https://www.etsy.com/your/shops/me/tools/listings/stats:true?ref=seller-platform-mcnav"
     URL4="https://gemini.google.com/app"
 
     if [ ! -f "$CHROME_PATH" ]; then
-        echo "[ERROR] Google Chrome not found at $CHROME_PATH"
+        echo "[ERROR] Google Chrome not found! Please make sure it's installed in /Applications"
         exit 1
     fi
 
@@ -52,12 +57,29 @@ if [ "$LAUNCH_CHROME" = true ]; then
 fi
 
 echo ""
-echo "Starting Application..."
+echo "Starting Application with Python 3.14..."
+
+# 1. ปรับปรุงการตรวจสอบ Python 3.14
+PYTHON_EXE="/usr/local/bin/python3.14"
+if [ ! -f "$PYTHON_EXE" ]; then
+    PYTHON_EXE=$(which python3.14)
+fi
+
+# 2. จัดการ venv (ลบของเก่าทิ้งถ้าเวอร์ชันไม่ตรง)
+if [ -d "venv" ]; then
+    VENV_VER=$(./venv/bin/python --version 2>&1)
+    if [[ ! "$VENV_VER" == *"3.14"* ]]; then
+        echo "[INFO] Recreating venv for Python 3.14..."
+        rm -rf venv
+    fi
+fi
+
 if [ ! -d "venv" ]; then
-    python3 -m venv venv
+    $PYTHON_EXE -m venv venv
 fi
 
 source venv/bin/activate
-pip install -r requirements.txt
+pip install -r requirements.txt --quiet
 
-python3 gui.py
+echo "[INFO] Launching GUI..."
+python gui.py
