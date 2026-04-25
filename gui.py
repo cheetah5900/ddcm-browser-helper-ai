@@ -19,46 +19,48 @@ class App(ctk.CTk):
         super().__init__()
 
         self.title("DDCM WorkFlow - Sequential Guide")
-        self.geometry("900x950")
+        self.geometry("950x950")
         
-        # Initialize the bot
         self.bot = BrowserBot()
-
-        # Layout configuration
         self.grid_columnconfigure(0, weight=1)
-        self.grid_rowconfigure(0, weight=0) # Title
-        self.grid_rowconfigure(1, weight=1) # Main Content
+        self.grid_rowconfigure(0, weight=0)
+        self.grid_rowconfigure(1, weight=1)
 
-        # Title
         self.label = ctk.CTkLabel(self, text="DDCM WorkFlow - Sequential Guide", font=("Arial", 24, "bold"), text_color="white")
         self.label.grid(row=0, column=0, padx=20, pady=20)
 
-        # Scrollable Frame for 13 Steps (Single Column)
         self.main_container = ctk.CTkScrollableFrame(self)
         self.main_container.grid(row=1, column=0, padx=20, pady=(0, 20), sticky="nsew")
         self.main_container.grid_columnconfigure(0, weight=1)
 
         # ---------------------------------------------------------
-        # STEP 1: Basic Info
+        # STEP 1: Basic Info with Individual Set Default Buttons
         # ---------------------------------------------------------
         self.frame_step1 = self.create_step_frame("1. กรอกข้อมูลพื้นฐาน (Basic Info)")
-        self.add_label(self.frame_step1, "Folder Name (ชื่อโฟลเดอร์งาน)")
-        self.entry_folder_name = self.add_entry(self.frame_step1, "Folder Name")
-        self.add_label(self.frame_step1, "Element Name (ชื่อโฟลเดอร์ของตกแต่ง)")
-        self.entry_element_name = self.add_entry(self.frame_step1, "Element Name", "Songkran")
-        self.add_label(self.frame_step1, "Element Path (ที่เก็บของตกแต่ง)")
-        self.entry_element_path = self.add_entry(self.frame_step1, "Element Path")
-        self.add_label(self.frame_step1, "Local Path (ที่เก็บงานในเครื่อง)")
-        self.entry_local_path = self.add_entry(self.frame_step1, "Local Path")
-        self.add_label(self.frame_step1, "Remote Path (ที่เก็บงานบน Drive)")
-        self.entry_remote_path = self.add_entry(self.frame_step1, "Remote Path")
+        
+        # Helper to add Row with Entry + Set Default Button
+        def add_input_row(parent, label_text, key, default_val=""):
+            self.add_label(parent, label_text)
+            row_frame = ctk.CTkFrame(parent, fg_color="transparent")
+            row_frame.pack(fill="x", pady=(0, 10))
+            entry = ctk.CTkEntry(row_frame, placeholder_text=label_text)
+            if default_val: entry.insert(0, default_val)
+            entry.pack(side="left", fill="x", expand=True, padx=(0, 10))
+            btn = ctk.CTkButton(row_frame, text="Set Default", width=100, fg_color="#5D6D7E", 
+                                command=lambda: self.action_save_single_default(key, entry.get().strip()))
+            btn.pack(side="right")
+            return entry
+
+        self.entry_folder_name = add_input_row(self.frame_step1, "Folder Name (ชื่อโฟลเดอร์งาน)", "folder_name")
+        self.entry_element_name = add_input_row(self.frame_step1, "Element Name (ชื่อโฟลเดอร์ของตกแต่ง)", "element_name", "Songkran")
+        self.entry_element_path = add_input_row(self.frame_step1, "Element Path (ที่เก็บของตกแต่ง)", "element_path")
+        self.entry_local_path = add_input_row(self.frame_step1, "Local Path (ที่เก็บงานในเครื่อง)", "local_path")
+        self.entry_remote_path = add_input_row(self.frame_step1, "Remote Path (ที่เก็บงานบน Drive)", "remote_path")
 
         # ---------------------------------------------------------
         # STEP 2: Config & Folders
         # ---------------------------------------------------------
         self.frame_step2 = self.create_step_frame("2. ตั้งค่าและเตรียมโฟลเดอร์")
-        self.add_desc(self.frame_step2, "บันทึกค่า Element, Local และ Remote Path ด้านบนให้เป็นค่าเริ่มต้นสำหรับการเปิดโปรแกรมครั้งถัดไป")
-        self.btn_set_default = self.add_button(self.frame_step2, "Set Paths as Default", self.action_save_defaults, "#5D6D7E")
         self.add_desc(self.frame_step2, "สร้างโฟลเดอร์งานที่ Local และ Remote พร้อมโฟลเดอร์ย่อยที่จำเป็น (เช่น 4000x4000, Sticker Set)")
         self.btn_create_folders = self.add_button(self.frame_step2, "Create Folders", self.action_create_folders, "#27AE60")
 
@@ -78,41 +80,29 @@ class App(ctk.CTk):
         self.entry_elements_count.grid(row=2, column=0, padx=5, pady=5)
         ctk.CTkButton(inner_gemini, text="Gen Elements", width=140, command=self.action_gemini_elements, fg_color="#8E44AD").grid(row=2, column=1, padx=5, pady=5)
 
-        # ---------------------------------------------------------
-        # STEP 4: Download Images
-        # ---------------------------------------------------------
+        # 4. Download Images
         self.frame_step4 = self.create_step_frame("4. จัดเก็บรูปภาพจาก Gemini")
         self.add_desc(self.frame_step4, "โหลดรูปสติ๊กเกอร์ทั้งหมดในหน้า Gemini และย้ายไปไว้ที่โฟลเดอร์ images ใน Downloads")
         self.btn_download_imgs = self.add_button(self.frame_step4, "Download images", self.action_download_images, "#2E86C1")
 
-        # ---------------------------------------------------------
-        # STEP 5: Remove Background
-        # ---------------------------------------------------------
+        # 5. Remove Background
         self.frame_step5 = self.create_step_frame("5. ตัดพื้นหลัง (Remove Background)")
         self.add_desc(self.frame_step5, "ให้นำรูปใน Downloads/images เข้าโปรแกรม Photoshop เพื่อตัดพื้นหลังให้เป็นพื้นหลังใส (Transparent) ให้เรียบร้อย")
 
-        # ---------------------------------------------------------
-        # STEP 6: Upscale Instruction
-        # ---------------------------------------------------------
+        # 6. Upscale Instruction
         self.frame_step6 = self.create_step_frame("6. การขยายภาพ (Upscale)")
         self.add_desc(self.frame_step6, "ให้นำรูปที่ตัดพื้นหลังแล้วไปขยายขนาดด้วยโปรแกรม Upscayl โดยตั้งค่าให้บันทึกผลลัพธ์ไว้ในโฟลเดอร์ย่อยชื่อ 'upscale' ภายในโฟลเดอร์ images เดิม")
 
-        # ---------------------------------------------------------
-        # STEP 7: Upscale to Local
-        # ---------------------------------------------------------
+        # 7. Upscale to Local
         self.frame_step7 = self.create_step_frame("7. ย้ายไฟล์ Upscale เข้าเครื่อง")
         self.add_desc(self.frame_step7, "ย้ายไฟล์ภาพต้นฉบับไปที่ Original และย้ายไฟล์ที่ขยายแล้วจากโฟลเดอร์ upscale ไปที่ 4000x4000 พร้อมเปลี่ยนชื่อไฟล์และลบไฟล์ชั่วคราวทิ้ง")
         self.btn_copy_upscale = self.add_button(self.frame_step7, "Upscale to Local", self.action_copy_upscale, "#8E44AD")
 
-        # ---------------------------------------------------------
-        # STEP 8: Canva Instruction
-        # ---------------------------------------------------------
+        # 8. Canva Instruction
         self.frame_step8 = self.create_step_frame("8. ออกแบบปกใน Canva")
         self.add_desc(self.frame_step8, "ให้เปิดโปรแกรม Canva และนำรูปภาพที่เตรียมไว้มาจัดวางทำเป็นรูปหน้าปกสินค้าและ Preview ให้เรียบร้อย")
 
-        # ---------------------------------------------------------
-        # STEP 9: Canva Automation
-        # ---------------------------------------------------------
+        # 9. Canva Automation
         self.frame_step9 = self.create_step_frame("9. Canva Automation (ส่งออกไฟล์อัตโนมัติ)")
         self.add_desc(self.frame_step9, "กำหนดช่วงหน้าและสั่ง Export ไฟล์ PNG, JPG, PDF ตามลำดับ")
         f_canva = ctk.CTkFrame(self.frame_step9, fg_color="transparent"); f_canva.pack(fill="x")
@@ -124,30 +114,22 @@ class App(ctk.CTk):
         self.btn_export_pdf = self.add_button(self.frame_step9, "Export PDF", self.action_export_pdf, "#E04F5F")
         self.btn_export_all = self.add_button(self.frame_step9, "Export ALL (ลำดับต่อเนื่อง)", self.action_export_all, "#005F99")
 
-        # ---------------------------------------------------------
-        # STEP 10: Unzip
-        # ---------------------------------------------------------
+        # 10. Unzip
         self.frame_step10 = self.create_step_frame("10. แตกไฟล์ Zip งาน")
         self.add_desc(self.frame_step10, "แตกไฟล์ Zip ทั้งหมดที่เพิ่งดาวน์โหลดมาจาก Canva เพื่อเตรียมรวบรวมเข้าโฟลเดอร์งาน")
         self.btn_unzip = self.add_button(self.frame_step10, "Unzip Downloads", self.action_unzip_downloads, "#FFA500")
 
-        # ---------------------------------------------------------
-        # STEP 11: Download to Local
-        # ---------------------------------------------------------
+        # 11. Download to Local
         self.frame_step11 = self.create_step_frame("11. รวบรวมไฟล์เข้าโฟลเดอร์งาน")
         self.add_desc(self.frame_step11, "ย้ายไฟล์ภาพจาก Downloads เข้าสู่โฟลเดอร์ย่อย Sticker Set และ Preview ในเครื่องคอมพิวเตอร์ของคุณ")
         self.btn_download_local = self.add_button(self.frame_step11, "Download to Local", self.action_download_to_local, "#F39C12")
 
-        # ---------------------------------------------------------
-        # STEP 12: Local to Remote
-        # ---------------------------------------------------------
+        # 12. Local to Remote
         self.frame_step12 = self.create_step_frame("12. สำรองไฟล์ขึ้น Cloud (Drive)")
         self.add_desc(self.frame_step12, "คัดลอกโฟลเดอร์งานทั้งหมด และดึงไฟล์ Elements จากคลัง มาเก็บไว้ที่ Remote Path (Google Drive)")
         self.btn_local_remote = self.add_button(self.frame_step12, "Local to Remote", self.action_local_remote, "#3498DB")
 
-        # ---------------------------------------------------------
-        # STEP 13: Upload to Etsy
-        # ---------------------------------------------------------
+        # 13. Upload to Etsy
         self.frame_step13 = self.create_step_frame("13. ลงสินค้าใน Etsy")
         self.etsy_colors = ["Beige", "Black", "Blue", "Bronze", "Brown", "Clear", "Copper", "Gold", "Gray", "Green", "Orange", "Pink", "Purple", "Rainbow", "Red", "Rose gold", "Silver", "White", "Yellow"]
         self.add_label(self.frame_step13, "Primary Color (สีหลัก)")
@@ -157,12 +139,10 @@ class App(ctk.CTk):
         self.btn_etsy = self.add_button(self.frame_step13, "Create Listing", self.action_etsy_listing, "#F1641E")
         self.add_desc(self.frame_step13, "*อย่าลืมเปิด Modal ในหน้า DDCM ไว้รอ*")
 
-        # --- Status Section ---
+        # Status
         self.status_label = ctk.CTkLabel(self, text="Connecting...", text_color="orange", font=("Arial", 15, "bold"))
         self.status_label.grid(row=2, column=0, pady=10)
-        
-        self.load_defaults()
-        self.start_browser_thread()
+        self.load_defaults(); self.start_browser_thread()
 
     # --- UI Helpers ---
     def create_step_frame(self, title):
@@ -182,11 +162,16 @@ class App(ctk.CTk):
         lbl = ctk.CTkLabel(parent, text=text, font=("Arial", font_size), wraplength=750, justify="left", text_color=color); lbl.pack(pady=(0, 5), anchor="w"); return lbl
 
     # --- Logic Methods ---
-    def action_save_defaults(self):
-        c = {"element_name": self.entry_element_name.get().strip(), "element_path": self.entry_element_path.get().strip(), "local_path": self.entry_local_path.get().strip(), "remote_path": self.entry_remote_path.get().strip()}
+    def action_save_single_default(self, key, value):
+        c = {}
+        if os.path.exists(CONFIG_FILE):
+            try:
+                with open(CONFIG_FILE, "r", encoding="utf-8") as f: c = json.load(f)
+            except: pass
+        c[key] = value
         try:
             with open(CONFIG_FILE, "w", encoding="utf-8") as f: json.dump(c, f, indent=4)
-            self.log("Defaults saved successfully!")
+            self.log(f"Saved default for {key}!")
         except Exception as e: self.log(f"Error: {e}", error=True)
 
     def load_defaults(self):
@@ -194,8 +179,8 @@ class App(ctk.CTk):
             try:
                 with open(CONFIG_FILE, "r", encoding="utf-8") as f:
                     c = json.load(f)
-                    if "element_name" in c:
-                        self.entry_element_name.delete(0, 'end'); self.entry_element_name.insert(0, c.get("element_name", ""))
+                    self.entry_folder_name.insert(0, c.get("folder_name", ""))
+                    self.entry_element_name.delete(0, 'end'); self.entry_element_name.insert(0, c.get("element_name", "Songkran"))
                     self.entry_element_path.insert(0, c.get("element_path", ""))
                     self.entry_local_path.insert(0, c.get("local_path", ""))
                     self.entry_remote_path.insert(0, c.get("remote_path", ""))
@@ -255,7 +240,7 @@ class App(ctk.CTk):
                         time.sleep(1); wt += 1
                     time.sleep(1)
                 except Exception as e: self.log(f"Error clicking btn {i+1}: {e}", error=True)
-            self.log("Moving files...")
+            self.log("Download sequence finished. Moving files...")
             try:
                 dp = os.path.join(os.path.expanduser("~"), "Downloads"); ip = os.path.join(dp, "images")
                 os.makedirs(ip, exist_ok=True); mc = 0
@@ -331,21 +316,21 @@ class App(ctk.CTk):
         self.log("Running Export PNG...")
         if not self.bot.switch_to_tab_containing("canva.com"): self.log("Error: Canva not found."); return
         ps = self.entry_png_pages.get().strip() or "1-4"
-        steps = [("Rename to 'png'", "//input[@aria-label='Design title']", "png"), ("Share", "//button[.//span[text()='Share']]"), ("Download", "//button[@aria-label='Download']"), ("Type", "//button[@aria-label='File type']"), ("PNG", "//li[@role='option']//div[contains(text(), 'PNG')]"), ("Size 1", "//input[@role='spinbutton']", "1"), ("Trans", "//label[.//p[contains(text(), 'Transparent background')]]"), (f"Pages {ps}", "//input[@placeholder='Select pages']", ps), ("Go", "//button[@type='submit'][.//span[contains(text(), 'Download')]]")]
+        steps = [("Rename Design to 'png'", "//input[@aria-label='Design title']", "png"), ("Click Share", "//button[.//span[text()='Share']]"), ("Click Download", "//button[@aria-label='Download']"), ("Click File Type", "//button[@aria-label='File type']"), ("Select PNG", "//*[@role='option']//div[text()='PNG']"), ("Set Size to 1", "//input[@role='spinbutton']", "1"), ("Click Transparent", "//label[.//p[contains(text(), 'Transparent background')]]"), (f"Set Pages to {ps}", "//input[@placeholder='Select pages']", ps), ("Final Download", "//button[@type='submit'][.//span[contains(text(), 'Download')]]")]
         self._execute_steps(steps)
 
     def action_export_jpg(self):
         self.log("Running Export JPG...")
         if not self.bot.switch_to_tab_containing("canva.com"): self.log("Error: Canva not found."); return
         ps = self.entry_jpg_pages.get().strip() or "6-9"
-        steps = [("Rename to 'jpg'", "//input[@aria-label='Design title']", "jpg"), ("Share", "//button[.//span[text()='Share']]"), ("Download", "//button[@aria-label='Download']"), ("Type", "//button[@aria-label='File type']"), ("JPG", "//li[@role='option']//div[contains(text(), 'JPG')]"), ("Size 0.5", "//input[@role='spinbutton']", "0.5"), (f"Pages {ps}", "//input[@placeholder='Select pages']", ps), ("Go", "//button[@type='submit'][.//span[contains(text(), 'Download')]]")]
+        steps = [("Rename Design to 'jpg'", "//input[@aria-label='Design title']", "jpg"), ("Click Share", "//button[.//span[text()='Share']]"), ("Click Download", "//button[@aria-label='Download']"), ("Click File Type", "//button[@aria-label='File type']"), ("Select JPG", "//*[@role='option']//div[text()='JPG']"), ("Set Size to 0.5", "//input[@role='spinbutton']", "0.5"), (f"Set Pages to {ps}", "//input[@placeholder='Select pages']", ps), ("Final Download", "//button[@type='submit'][.//span[contains(text(), 'Download')]]")]
         self._execute_steps(steps)
 
     def action_export_pdf(self):
         self.log("Running Export PDF...")
         if not self.bot.switch_to_tab_containing("canva.com"): self.log("Error: Canva not found."); return
         ps = self.entry_pdf_pages.get().strip() or "10"
-        steps = [("Rename to 'pdf'", "//input[@aria-label='Design title']", "pdf_for_downloading"), ("Share", "//button[.//span[text()='Share']]"), ("Download", "//button[@aria-label='Download']"), ("Type", "//button[@aria-label='File type']"), ("PDF", "//li[@role='option']//div[contains(text(), 'PDF Standard')]"), (f"Pages {ps}", "//input[@placeholder='Select pages']", ps), ("Go", "//button[@type='submit'][.//span[contains(text(), 'Download')]]")]
+        steps = [("Rename Design to 'pdf_for_downloading'", "//input[@aria-label='Design title']", "pdf_for_downloading"), ("Click Share", "//button[.//span[text()='Share']]"), ("Click Download", "//button[@aria-label='Download']"), ("Click File Type", "//button[@aria-label='File type']"), ("Select PDF Standard", "//*[@role='option']//div[text()='PDF Standard']"), (f"Set Pages to {ps}", "//input[@placeholder='Select pages']", ps), ("Final Download", "//button[@type='submit'][.//span[contains(text(), 'Download')]]")]
         self._execute_steps(steps)
 
     def action_export_all(self):
@@ -396,27 +381,84 @@ class App(ctk.CTk):
         except Exception as e: self.log(f"Unzip Error: {e}", error=True)
 
     def action_download_to_local(self):
-        fn, lp = self.entry_folder_name.get().strip(), self.entry_local_path.get().strip()
-        if not fn or not lp: self.log("Error: Paths required.", error=True); return
-        base, dp = os.path.join(lp, fn), os.path.join(os.path.expanduser("~"), "Downloads")
-        for s, d_sub in [("png", "Sticker Set"), ("jpg", "Preview")]:
-            src, dst = os.path.join(dp, s), os.path.join(base, d_sub)
-            if os.path.exists(src):
-                if not os.path.exists(dst): self.log(f"Error: No {d_sub}", error=True); continue
-                c = 0
-                for it in os.listdir(src):
-                    if os.path.isfile(os.path.join(src, it)): shutil.copy2(os.path.join(src, it), os.path.join(dst, it)); c += 1
-                self.log(f"Copied {c} {s} files.")
-        pdfs = [f for f in os.listdir(dp) if f.lower().endswith('.pdf')]
+        folder_name, local_path = self.entry_folder_name.get().strip(), self.entry_local_path.get().strip()
+        if not folder_name or not local_path: self.log("Error: Paths required.", error=True); return
+        base, downloads_path = os.path.join(local_path, folder_name), os.path.join(os.path.expanduser("~"), "Downloads")
+        
+        # 1. Copy & Cleanup Folders (png, jpg) and their Zips
+        for search_key, target_sub in [("png", "Sticker Set"), ("jpg", "Preview")]:
+            target_dir = os.path.join(base, target_sub)
+            if not os.path.exists(target_dir):
+                self.log(f"Error: Target {target_sub} folder not found.", error=True)
+                continue
+
+            # Find all folders matching the key (e.g., "png", "png (1)")
+            matched_folders = [f for f in os.listdir(downloads_path) 
+                               if os.path.isdir(os.path.join(downloads_path, f)) and f.lower().startswith(search_key)]
+            
+            for folder in matched_folders:
+                src = os.path.join(downloads_path, folder)
+                try:
+                    files_in_folder = os.listdir(src)
+                    copied_count = 0
+                    for file_item in files_in_folder:
+                        src_file = os.path.join(src, file_item)
+                        if os.path.isfile(src_file):
+                            shutil.copy2(src_file, os.path.join(target_dir, file_item))
+                            copied_count += 1
+                    
+                    self.log(f"Copied {copied_count} files from '{folder}' to {target_sub}.")
+                    
+                    # Cleanup the folder
+                    shutil.rmtree(src)
+                    self.log(f"Cleaned up folder: {folder}")
+                except Exception as e:
+                    self.log(f"Error handling folder {folder}: {e}", error=True)
+
+            # Find and cleanup all matching zip files (e.g., "png.zip", "png (1).zip")
+            matched_zips = [f for f in os.listdir(downloads_path)
+                            if os.path.isfile(os.path.join(downloads_path, f)) 
+                            and f.lower().startswith(search_key) and f.lower().endswith(".zip")]
+            
+            for zip_file in matched_zips:
+                try:
+                    os.remove(os.path.join(downloads_path, zip_file))
+                    self.log(f"Cleaned up zip: {zip_file}")
+                except Exception as e:
+                    self.log(f"Could not delete zip {zip_file}: {e}", error=True)
+
+        # 2. Copy & Cleanup PDF
+        pdfs = [f for f in os.listdir(downloads_path) if f.lower().endswith('.pdf')]
         if pdfs:
-            dst = os.path.join(base, "Download file")
-            if not os.path.exists(dst): self.log("Error: No Download file", error=True); return
-            ptc = next((p for p in pdfs if "pdf_for_downloading" in p), pdfs[0])
-            shutil.copy2(os.path.join(dp, ptc), os.path.join(dst, ptc)); self.log(f"Copied {ptc}.")
+            pdf_target_dir = os.path.join(base, "Download file")
+            if os.path.exists(pdf_target_dir):
+                # Prefer the one with 'pdf_for_downloading' in name
+                target_pdf = next((p for p in pdfs if "pdf_for_downloading" in p.lower()), pdfs[0])
+                try:
+                    shutil.copy2(os.path.join(downloads_path, target_pdf), os.path.join(pdf_target_dir, target_pdf))
+                    self.log(f"Copied PDF: {target_pdf}")
+                    
+                    # Cleanup the copied PDF
+                    os.remove(os.path.join(downloads_path, target_pdf))
+                    self.log(f"Cleaned up PDF: {target_pdf}")
+                except Exception as e:
+                    self.log(f"Error handling PDF: {e}", error=True)
+            else:
+                self.log("Error: 'Download file' directory not found.", error=True)
+        
+        self.log("Step 11: Finished Copy & Cleanup.")
 
     def action_local_remote(self):
         fn, lp, rp = self.entry_folder_name.get().strip(), self.entry_local_path.get().strip(), self.entry_remote_path.get().strip()
-        if not all([fn, lp, rp]): self.log("Error: All paths required.", error=True); return
+        en, ep = self.entry_element_name.get().strip(), self.entry_element_path.get().strip()
+        if not all([fn, lp, rp, en, ep]): self.log("Error: All fields required.", error=True); return
+        
+        # Mandatory Element Check
+        es = os.path.join(ep, en)
+        if not os.path.exists(es):
+            self.log(f"CRITICAL: Elements folder NOT FOUND: {en}", error=True)
+            return
+
         total = 0
         for sub in ["4000x4000", "Sticker Set"]:
             s, d = os.path.join(lp, fn, sub), os.path.join(rp, fn, sub)
@@ -425,14 +467,13 @@ class App(ctk.CTk):
             for it in os.listdir(s):
                 if os.path.isfile(os.path.join(s, it)): shutil.copy2(os.path.join(s, it), os.path.join(d, it)); total += 1
         self.log(f"Copied {total} to Remote.")
-        en, ep = self.entry_element_name.get().strip(), self.entry_element_path.get().strip()
-        if en and ep:
-            es, rd = os.path.join(ep, en), os.path.join(rp, fn, "4000x4000")
-            if os.path.exists(es):
-                os.makedirs(rd, exist_ok=True); c = 0
-                for it in os.listdir(es):
-                    if os.path.isfile(os.path.join(es, it)): shutil.copy2(os.path.join(es, it), os.path.join(rd, it)); c += 1
-                self.log(f"Copied {c} elements to Remote.")
+        
+        # Copy Elements to Remote 4000x4000
+        rd = os.path.join(rp, fn, "4000x4000")
+        os.makedirs(rd, exist_ok=True); c = 0
+        for it in os.listdir(es):
+            if os.path.isfile(os.path.join(es, it)): shutil.copy2(os.path.join(es, it), os.path.join(rd, it)); c += 1
+        self.log(f"Copied {c} elements to Remote.")
 
     def action_etsy_listing(self):
         self.log("Starting Etsy..."); up, us = self.dropdown_primary.get(), self.dropdown_secondary.get()
@@ -445,7 +486,7 @@ class App(ctk.CTk):
         self.bot.driver.switch_to.new_window('tab'); self.bot.driver.get("https://www.etsy.com/your/shops/me/listing-editor/create")
         try: WebDriverWait(self.bot.driver, 20).until(lambda d: "etsy.com" in d.current_url); time.sleep(2)
         except: self.log("Error: Etsy timeout", error=True); return
-        setup = [("Cat", "//div[contains(@class, 'le-category-action-item') and .//h2[contains(text(), 'Clip Art')]]"), ("Digital", "//input[@name='listing_type_options_group' and @value='download']"), ("I did", "//label[contains(., 'I did')]"), ("Supply", "//label[contains(., 'A supply or tool')]"), ("Year", "//select[@id='when-made-select']", "2020_2026"), ("AI", "//input[@value='ai_gen']")]
+        setup = [("Category", "//div[contains(@class, 'le-category-action-item') and .//h2[contains(text(), 'Clip Art')]]"), ("Digital", "//input[@name='listing_type_options_group' and @value='download']"), ("I did", "//label[contains(., 'I did')]"), ("Supply", "//label[contains(., 'A supply or tool')]"), ("Year", "//select[@id='when-made-select']", "2020_2026"), ("AI", "//input[@value='ai_gen']")]
         for n, x, *v in setup:
             try:
                 el = WebDriverWait(self.bot.driver, 10).until(EC.presence_of_element_located((By.XPATH, x))); self.bot.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", el); time.sleep(0.3)
