@@ -722,6 +722,8 @@ class App(ctk.CTk):
             es = os.path.join(ep, en)
             if not os.path.exists(es): 
                 self.log(f"CRITICAL: Elements folder NOT FOUND: {en}", error=True); return
+
+            clean_name = fn.split(" - ", 1)[1] if " - " in fn else fn
             
             self.log("Starting Local to Remote...")
             total_copied = 0
@@ -731,19 +733,22 @@ class App(ctk.CTk):
                 s, d = os.path.join(lp, fn, sub), os.path.join(rp, fn, sub)
                 if not os.path.exists(s): continue
                 os.makedirs(d, exist_ok=True)
-                files = [f for f in os.listdir(s) if os.path.isfile(os.path.join(s, f))]
+                files = sorted([f for f in os.listdir(s) if os.path.isfile(os.path.join(s, f))])
                 for i, it in enumerate(files):
                     self.log(f"Copying {sub}: {i+1}/{len(files)}...")
-                    shutil.copy2(os.path.join(s, it), os.path.join(d, it))
+                    ext = os.path.splitext(it)[1]
+                    # Always start numbering at (1) on Remote.
+                    shutil.copy2(os.path.join(s, it), os.path.join(d, f"{clean_name} ({i+1}){ext}"))
                     total_copied += 1
             
             # 2. Copy Elements from Library to Remote 4000x4000
             rd = os.path.join(rp, fn, "4000x4000")
             os.makedirs(rd, exist_ok=True)
-            el_files = [f for f in os.listdir(es) if os.path.isfile(os.path.join(es, f))]
+            el_files = sorted([f for f in os.listdir(es) if os.path.isfile(os.path.join(es, f))])
             el_copied = 0
             for i, it in enumerate(el_files):
                 self.log(f"Copying Elements: {i+1}/{len(el_files)}...")
+                # Keep element filenames as-is.
                 shutil.copy2(os.path.join(es, it), os.path.join(rd, it))
                 el_copied += 1
                 total_copied += 1

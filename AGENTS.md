@@ -110,6 +110,19 @@ This section records repo-specific implementation notes that were previously tra
 - Added button descriptions under `Create Folders` and `Unzip Downloads` in the File Tools section for consistency.
 - Implemented file operations in `action_copy_upscale` and `action_local_remote` using `shutil.copy2`.
 
+### Workflow Conventions
+
+- Step 8 (`action_copy_upscale`): copy all images under `~/Downloads/images` (including subfolders) into `Local/<Folder Name>/4000x4000` and rename to `<Clean Name> (1..n)`.
+- Step 14 (`_run_local_remote`): when copying `4000x4000` and `Sticker Set` from Local to Remote, rename files to `<Clean Name> (1..n)` starting at `(1)` on Remote.
+- Step 14 Elements: copy element files to Remote `4000x4000` without renaming.
+- Deletion: any cleanup must use `App._trash()` (send to OS Trash), not permanent deletion.
+
+### UI Conventions
+
+- The GUI is intended to open maximized on launch.
+- Steps are laid out in grouped boxes: steps 1-4 grouped, steps 5-9 grouped.
+- Scroll behavior should be smooth and reasonably granular (mousewheel scroll uses units, not page jumps).
+
 ---
 
 **These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.
