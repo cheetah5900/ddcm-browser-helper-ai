@@ -3,3 +3,5 @@ webdriver-manager
 customtkinter
 Pillow
 send2trash
+fastapi
+uvicorn

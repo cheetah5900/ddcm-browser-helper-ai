@@ -43,6 +43,7 @@ if [ "$LAUNCH_CHROME" = true ]; then
     URL2="https://ddcm.litarandfriends.uk"
     URL3="https://www.etsy.com/your/shops/me/tools/listings/stats:true?ref=seller-platform-mcnav"
     URL4="https://gemini.google.com/app"
+    URL5="http://127.0.0.1:6969"
 
     if [ ! -f "$CHROME_PATH" ]; then
         echo "[ERROR] Google Chrome not found! Please make sure it's installed in /Applications"
@@ -50,7 +51,7 @@ if [ "$LAUNCH_CHROME" = true ]; then
     fi
 
     # Launch Chrome independently using macOS 'open' command
-    open -na "Google Chrome" --args --remote-debugging-port=9222 --user-data-dir="$USER_DATA" "$URL1" "$URL2" "$URL3" "$URL4"
+    open -na "Google Chrome" --args --remote-debugging-port=9222 --user-data-dir="$USER_DATA" "$URL1" "$URL2" "$URL3" "$URL4" "$URL5"
 
     echo "Waiting 5 seconds for Chrome to launch..."
     sleep 5
@@ -104,4 +105,23 @@ pip install -r requirements.txt --quiet
 
 echo ""
 echo "[SUCCESS] Environment ready. Launching GUI..."
-python gui.py
+
+# Build React UI if needed
+if [ -d "web" ]; then
+  if [ ! -d "web/node_modules" ]; then
+    echo "[INFO] Installing web dependencies..."
+    (cd web && npm install)
+  fi
+  if [ ! -f "web/dist/index.html" ]; then
+    echo "[INFO] Building web UI..."
+    (cd web && npm run build)
+  fi
+fi
+
+echo "[INFO] Starting backend on http://127.0.0.1:6969 ..."
+uvicorn backend.app:app --host 127.0.0.1 --port 6969 &
+BACKEND_PID=$!
+sleep 1
+
+echo "[INFO] Backend PID: $BACKEND_PID (Ctrl+C to stop)"
+wait $BACKEND_PID
