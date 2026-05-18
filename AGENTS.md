@@ -14,6 +14,37 @@ Before implementing:
 - If a simpler approach exists, say so. Push back when warranted.
 - If something is unclear, stop. Name what's confusing. Ask.
 
+## Output Rules
+
+Return code first. Explanation after, only if non-obvious.
+No inline prose. Use comments sparingly - only where logic is unclear.
+No boilerplate unless explicitly requested.
+
+Code Rules
+Simplest working solution. No over-engineering.
+No abstractions for single-use operations.
+No speculative features or "you might also want..."
+Read the file before modifying it. Never edit blind.
+No docstrings or type annotations on code not being changed.
+No error handling for scenarios that cannot happen.
+Three similar lines is better than a premature abstraction.
+
+Review Rules
+State the bug. Show the fix. Stop.
+No suggestions beyond the scope of the review.
+No compliments on the code before or after the review.
+
+Debugging Rules
+Never speculate about a bug without reading the relevant code first.
+State what you found, where, and the fix. One pass.
+If cause is unclear: say so. Do not guess.
+
+Simple Formatting
+No em dashes, smart quotes, or decorative Unicode symbols.
+Plain hyphens and straight quotes only.
+Natural language characters (accented letters, CJK, etc.) are fine when the content requires them.
+Code output must be copy-paste safe.
+
 ## 2. Simplicity First
 
 **Minimum code that solves the problem. Nothing speculative.**
@@ -67,6 +98,17 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 - When removing files/folders created or managed by this app, always move them to the OS Trash/Recycle Bin.
 - In code, use `send2trash.send2trash(path)` (wrapped by `App._trash`) instead of `os.remove`, `os.unlink`, or `shutil.rmtree`.
 - If Trash is unavailable or the operation fails, stop and report the error; do not fall back to permanent deletion unless explicitly requested by the user.
+
+## Project Notes (Merged From GEMINI.md)
+
+This section records repo-specific implementation notes that were previously tracked in `GEMINI.md`.
+
+### File Tools Buttons
+
+- Added a button for copying upscaled images into `4000x4000` (Path 1).
+- Added a `Local to Remote` button to copy `4000x4000` and `Sticker Set` from Path 1 to Path 2.
+- Added button descriptions under `Create Folders` and `Unzip Downloads` in the File Tools section for consistency.
+- Implemented file operations in `action_copy_upscale` and `action_local_remote` using `shutil.copy2`.
 
 ---
 
