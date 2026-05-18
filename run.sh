@@ -57,29 +57,51 @@ if [ "$LAUNCH_CHROME" = true ]; then
 fi
 
 echo ""
-echo "Starting Application with Python 3.14..."
+echo "Preparing Python Environment..."
 
-# 1. ปรับปรุงการตรวจสอบ Python 3.14
-PYTHON_EXE="/usr/local/bin/python3.14"
-if [ ! -f "$PYTHON_EXE" ]; then
-    PYTHON_EXE=$(which python3.14)
+# Try to find the best python version (3.14 -> 3.12 -> 3.x)
+PYTHON_EXE=$(which python3.14)
+if [ -z "$PYTHON_EXE" ]; then
+    PYTHON_EXE=$(which python3.12)
+fi
+if [ -z "$PYTHON_EXE" ]; then
+    PYTHON_EXE=$(which python3)
 fi
 
-# 2. จัดการ venv (ลบของเก่าทิ้งถ้าเวอร์ชันไม่ตรง)
+if [ -z "$PYTHON_EXE" ]; then
+    echo "[ERROR] Python 3 not found! Please install Python 3.10+."
+    exit 1
+fi
+
+echo "[INFO] Using Python: $PYTHON_EXE"
+
+# Manage venv
 if [ -d "venv" ]; then
-    VENV_VER=$(./venv/bin/python --version 2>&1)
-    if [[ ! "$VENV_VER" == *"3.14"* ]]; then
-        echo "[INFO] Recreating venv for Python 3.14..."
+    # Optional: check if venv matches the python version
+    VENV_PYTHON="./venv/bin/python"
+    if [ -f "$VENV_PYTHON" ]; then
+        V_OUT=$($VENV_PYTHON --version 2>&1)
+        echo "[INFO] Existing venv: $V_OUT"
+    else
+        echo "[INFO] venv seems broken. Recreating..."
         rm -rf venv
     fi
 fi
 
 if [ ! -d "venv" ]; then
+    echo "[INFO] Creating virtual environment (venv)..."
     $PYTHON_EXE -m venv venv
 fi
 
+# Activate venv
+echo "[INFO] Activating virtual environment..."
 source venv/bin/activate
+
+# Install requirements
+echo "[INFO] Updating dependencies..."
+pip install --upgrade pip --quiet
 pip install -r requirements.txt --quiet
 
-echo "[INFO] Launching GUI..."
+echo ""
+echo "[SUCCESS] Environment ready. Launching GUI..."
 python gui.py

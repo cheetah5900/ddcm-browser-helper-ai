@@ -60,6 +60,14 @@ For multi-step tasks, state a brief plan:
 
 Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
 
+## 5. Safe Deletion Policy
+
+**Never delete user files permanently.**
+
+- When removing files/folders created or managed by this app, always move them to the OS Trash/Recycle Bin.
+- In code, use `send2trash.send2trash(path)` (wrapped by `App._trash`) instead of `os.remove`, `os.unlink`, or `shutil.rmtree`.
+- If Trash is unavailable or the operation fails, stop and report the error; do not fall back to permanent deletion unless explicitly requested by the user.
+
 ---
 
 **These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.
