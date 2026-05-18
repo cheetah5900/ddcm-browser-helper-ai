@@ -526,41 +526,21 @@ class App(ctk.CTk):
         img_d = os.path.join(dp, "images")
         if not os.path.exists(img_d): self.log("Error: No 'images' folder", error=True); return
 
-        # Step 8 requirement: do nothing unless an `upscale` folder exists.
-        upscale_dirs = []
-        for root, dirs, files in os.walk(img_d):
-            if os.path.basename(root).lower() == "upscale":
-                upscale_dirs.append(root)
-        if not upscale_dirs:
-            self.log("No 'upscale' folder found. Skipping Step 8.")
-            return
-        
-        # 1. Handle Upscale in images root or resolution subfolders
-        found_any = False
         d4000 = os.path.join(base, "4000x4000"); os.makedirs(d4000, exist_ok=True)
-        for root in sorted(upscale_dirs):
-            img_files = sorted([f for f in os.listdir(root) if os.path.isfile(os.path.join(root, f))])
-            for i, it in enumerate(img_files):
-                shutil.copy2(
-                    os.path.join(root, it),
-                    os.path.join(d4000, f"{clean_name} ({i+1}){os.path.splitext(it)[1]}"),
-                )
-            self._trash(root)
-            found_any = True
-
-        # 2. Handle Original (files NOT in upscale folders)
-        dorig = os.path.join(base, "Original"); os.makedirs(dorig, exist_ok=True)
-        orig_files = []
+        img_files = []
         for root, dirs, files in os.walk(img_d):
-            if "upscayl" not in root.lower():
-                for f in files:
-                    if f.lower().endswith(('.png', '.jpg', '.jpeg', '.webp')):
-                        orig_files.append(os.path.join(root, f))
-        
-        for i, fp in enumerate(sorted(orig_files)):
-            shutil.copy2(fp, os.path.join(dorig, f"{clean_name} ({i+1}){os.path.splitext(fp)[1]}"))
-        
-        self._trash(img_d); self.log("Moved & Renamed all to Local.")
+            for f in files:
+                if f.lower().endswith((".png", ".jpg", ".jpeg", ".webp")):
+                    img_files.append(os.path.join(root, f))
+
+        if not img_files:
+            self.log("No images found in Downloads/images.")
+            return
+
+        for i, fp in enumerate(sorted(img_files)):
+            shutil.copy2(fp, os.path.join(d4000, f"{clean_name} ({i+1}){os.path.splitext(fp)[1]}"))
+
+        self._trash(img_d); self.log("Moved & Renamed images to Local.")
 
     def action_create_preview(self): threading.Thread(target=self._run_create_preview).start()
 
