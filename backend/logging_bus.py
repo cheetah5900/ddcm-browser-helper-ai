@@ -5,25 +5,31 @@ import time
 
 class LogBus:
     def __init__(self):
-        self._q: "queue.Queue[str]" = queue.Queue()
         self._lock = threading.Lock()
-        self._subscribers: set[int] = set()
+        self._subs: dict[int, "queue.Queue[str]"] = {}
         self._next_id = 1
 
     def publish(self, msg: str) -> None:
-        # Keep it simple: one shared queue, consumers read from it.
-        self._q.put(msg)
+        with self._lock:
+            qs = list(self._subs.values())
+        for q in qs:
+            try:
+                q.put_nowait(msg)
+            except Exception:
+                # Best-effort logging; drop if subscriber is slow/broken.
+                pass
 
     def subscribe(self) -> tuple[int, "queue.Queue[str]"]:
         with self._lock:
             sid = self._next_id
             self._next_id += 1
-            self._subscribers.add(sid)
-        return sid, self._q
+            q: "queue.Queue[str]" = queue.Queue()
+            self._subs[sid] = q
+        return sid, q
 
     def unsubscribe(self, sid: int) -> None:
         with self._lock:
-            self._subscribers.discard(sid)
+            self._subs.pop(sid, None)
 
 
 def sse_format(data: str, event: str | None = None) -> str:
