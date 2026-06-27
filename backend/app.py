@@ -15,6 +15,7 @@ from .workflow import (
     step12_unzip_downloads,
     step13_download_to_local,
     step14_local_to_remote,
+    step14_local_to_remote_no_elements,
     step2_create_folders,
     step3_gemini_gen_full_bot,
     step4_download_images_bot,
@@ -273,6 +274,20 @@ def step14(payload: dict[str, Any]) -> dict[str, Any]:
         return {"ok": True}
     except FileNotFoundError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/api/step/14-no-elements")
+def step14_no_elements(payload: dict[str, Any]) -> dict[str, Any]:
+    folder_name = str(payload.get("folder_name") or "").strip()
+    local_path = str(payload.get("local_path") or "").strip()
+    remote_path = str(payload.get("remote_path") or "").strip()
+    if not all([folder_name, local_path, remote_path]):
+        raise HTTPException(status_code=400, detail="folder_name/local_path/remote_path required")
+    try:
+        step14_local_to_remote_no_elements(folder_name, local_path, remote_path, log)
+        return {"ok": True}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 

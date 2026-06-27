@@ -73,39 +73,145 @@ def step14_local_to_remote(
     if not os.path.exists(elements_src):
         raise FileNotFoundError(f"Elements folder not found: {elements_src}")
 
+    def _normalize_dir(dir_path: str, desired_name: Callable[[int, str], str]) -> list[str]:
+        if not os.path.exists(dir_path):
+            return []
+
+        allowed_exts = (".png", ".jpg", ".jpeg", ".webp")
+        files = sorted(
+            [
+                f
+                for f in os.listdir(dir_path)
+                if os.path.isfile(os.path.join(dir_path, f))
+                and not f.startswith(".")
+                and os.path.splitext(f)[1].lower() in allowed_exts
+            ],
+        )
+
+        renames: list[tuple[str, str]] = []
+        for i, f in enumerate(files):
+            ext = os.path.splitext(f)[1]
+            want = desired_name(i + 1, ext)
+            if f != want:
+                renames.append((f, want))
+
+        if not renames:
+            return files
+
+        # Two-phase rename to avoid collisions.
+        tmp_map: list[tuple[str, str, str]] = []
+        for src, dst in renames:
+            tmp = f".{src}.tmp_step14"
+            os.replace(os.path.join(dir_path, src), os.path.join(dir_path, tmp))
+            tmp_map.append((tmp, dst, src))
+
+        for tmp, dst, _orig in tmp_map:
+            os.replace(os.path.join(dir_path, tmp), os.path.join(dir_path, dst))
+
+        return sorted(
+            [
+                f
+                for f in os.listdir(dir_path)
+                if os.path.isfile(os.path.join(dir_path, f)) and not f.startswith(".")
+            ],
+        )
+
+    # Normalize local names first, then copy as-is.
     total_copied = 0
-    allowed_exts = (".png", ".jpg", ".jpeg", ".webp")
     for sub in ["4000x4000", "Sticker Set"]:
         src_dir = os.path.join(local_path, folder_name, sub)
         dst_dir = os.path.join(remote_path, folder_name, sub)
         if not os.path.exists(src_dir):
             continue
         os.makedirs(dst_dir, exist_ok=True)
-        files = sorted(
-            [
-                f
-                for f in os.listdir(src_dir)
-                if os.path.isfile(os.path.join(src_dir, f))
-                and not f.startswith(".")
-                and os.path.splitext(f)[1].lower() in allowed_exts
-            ],
-        )
-        for i, it in enumerate(files):
-            ext = os.path.splitext(it)[1]
-            shutil.copy2(os.path.join(src_dir, it), os.path.join(dst_dir, f"{clean_name} ({i+1}){ext}"))
+        local_files = _normalize_dir(src_dir, lambda n, ext: f"{clean_name} ({n}){ext}")
+        for it in local_files:
+            if not os.path.isfile(os.path.join(src_dir, it)) or it.startswith("."):
+                continue
+            shutil.copy2(os.path.join(src_dir, it), os.path.join(dst_dir, it))
             total_copied += 1
 
-    # Elements to Remote 4000x4000 (no renaming)
+    # Normalize element names at source, then copy to Remote 4000x4000.
     rd = os.path.join(remote_path, folder_name, "4000x4000")
     os.makedirs(rd, exist_ok=True)
-    el_files = sorted([f for f in os.listdir(elements_src) if os.path.isfile(os.path.join(elements_src, f))])
+
+    el_files = _normalize_dir(elements_src, lambda n, ext: f"element ({n}){ext}")
     el_copied = 0
     for it in el_files:
+        if not os.path.isfile(os.path.join(elements_src, it)) or it.startswith("."):
+            continue
         shutil.copy2(os.path.join(elements_src, it), os.path.join(rd, it))
         el_copied += 1
         total_copied += 1
 
     log(f"Step 14: Done! Copied {total_copied} files total ({el_copied} elements).")
+
+
+def step14_local_to_remote_no_elements(
+    folder_name: str,
+    local_path: str,
+    remote_path: str,
+    log: Callable[[str], None],
+) -> None:
+    clean_name = clean_name_from_folder_name(folder_name)
+
+    def _normalize_dir(dir_path: str, desired_name: Callable[[int, str], str]) -> list[str]:
+        if not os.path.exists(dir_path):
+            return []
+
+        allowed_exts = (".png", ".jpg", ".jpeg", ".webp")
+        files = sorted(
+            [
+                f
+                for f in os.listdir(dir_path)
+                if os.path.isfile(os.path.join(dir_path, f))
+                and not f.startswith(".")
+                and os.path.splitext(f)[1].lower() in allowed_exts
+            ],
+        )
+
+        renames: list[tuple[str, str]] = []
+        for i, f in enumerate(files):
+            ext = os.path.splitext(f)[1]
+            want = desired_name(i + 1, ext)
+            if f != want:
+                renames.append((f, want))
+
+        if not renames:
+            return files
+
+        tmp_map: list[tuple[str, str]] = []
+        for src, dst in renames:
+            tmp = f".{src}.tmp_step14"
+            os.replace(os.path.join(dir_path, src), os.path.join(dir_path, tmp))
+            tmp_map.append((tmp, dst))
+
+        for tmp, dst in tmp_map:
+            os.replace(os.path.join(dir_path, tmp), os.path.join(dir_path, dst))
+
+        return sorted(
+            [
+                f
+                for f in os.listdir(dir_path)
+                if os.path.isfile(os.path.join(dir_path, f)) and not f.startswith(".")
+            ],
+        )
+
+    total_copied = 0
+    for sub in ["4000x4000", "Sticker Set"]:
+        src_dir = os.path.join(local_path, folder_name, sub)
+        dst_dir = os.path.join(remote_path, folder_name, sub)
+        if not os.path.exists(src_dir):
+            continue
+        os.makedirs(dst_dir, exist_ok=True)
+        local_files = _normalize_dir(src_dir, lambda n, ext: f"{clean_name} ({n}){ext}")
+        for it in local_files:
+            if not os.path.isfile(os.path.join(src_dir, it)) or it.startswith("."):
+                continue
+            shutil.copy2(os.path.join(src_dir, it), os.path.join(dst_dir, it))
+            total_copied += 1
+
+    log(f"Step 14: Done! Copied {total_copied} files total (no elements).")
 
 
 def step2_create_folders(

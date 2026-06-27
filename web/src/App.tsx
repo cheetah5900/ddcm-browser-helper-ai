@@ -58,6 +58,7 @@ export default function App() {
   const canRunStep14 = Boolean(
     cfg.folder_name && cfg.local_path && cfg.remote_path && cfg.element_name && cfg.element_path,
   );
+  const canRunStep14NoElements = Boolean(cfg.folder_name && cfg.local_path && cfg.remote_path);
 
   useEffect(() => {
     let cancelled = false;
@@ -205,6 +206,22 @@ export default function App() {
         remote_path: cfg.remote_path,
         element_name: cfg.element_name,
         element_path: cfg.element_path,
+      });
+    } catch (e) {
+      setLogs((prev) => prev.concat({ ts: Date.now(), text: `error: ${(e as Error).message}` }));
+    } finally {
+      endBusy();
+    }
+  }
+
+  async function runStep14NoElements() {
+    if (!(cfg.folder_name && cfg.local_path && cfg.remote_path)) return;
+    beginBusy();
+    try {
+      await apiPost<{ ok: boolean }>("/api/step/14-no-elements", {
+        folder_name: cfg.folder_name,
+        local_path: cfg.local_path,
+        remote_path: cfg.remote_path,
       });
     } catch (e) {
       setLogs((prev) => prev.concat({ ts: Date.now(), text: `error: ${(e as Error).message}` }));
@@ -389,7 +406,7 @@ export default function App() {
         {
           n: 14,
           title: "Local to Remote",
-          desc: "คัดลอกไป Remote และ rename เริ่ม (1) (Elements ไม่ rename)",
+          desc: "คัดลอกไป Remote และ rename เริ่ม (1) (Elements rename เป็น element (n))",
           action: { label: "Local to Remote", onClick: runStep14, enabled: canRunStep14 },
         },
         { n: 15, title: "Etsy", desc: "สร้าง Listing บน Etsy", action: { label: "Create Listing", onClick: runStep15, enabled: canRunStep15 } },
@@ -402,7 +419,7 @@ export default function App() {
       </header>
 
       <main className="grid">
-        <section className="card">
+        <section className="card leftSticky">
           <div className="cardTitle">1. Basic Info</div>
           <div className="muted">ตั้งค่าโฟลเดอร์/พาธที่ใช้ในงาน</div>
           <div className="form" style={{ marginTop: 12 }}>
@@ -527,9 +544,20 @@ export default function App() {
                       </button>
                     </div>
                   ) : s.action ? (
-                    <button className="btn primary" onClick={s.action.onClick} disabled={!s.action.enabled || busy}>
-                      {s.action.label}
-                    </button>
+                    s.n === 14 ? (
+                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                        <button className="btn primary" onClick={s.action.onClick} disabled={!s.action.enabled || busy}>
+                          {s.action.label}
+                        </button>
+                        <button className="btn primary" onClick={runStep14NoElements} disabled={!canRunStep14NoElements || busy}>
+                          Local to Remote (No Elements)
+                        </button>
+                      </div>
+                    ) : (
+                      <button className="btn primary" onClick={s.action.onClick} disabled={!s.action.enabled || busy}>
+                        {s.action.label}
+                      </button>
+                    )
                   ) : (
                     <div />
                   )}

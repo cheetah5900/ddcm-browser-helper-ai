@@ -70,6 +70,13 @@ body {
   padding: 14px;
 }
 
+.leftSticky {
+  position: sticky;
+  top: 72px;
+  align-self: start;
+  height: fit-content;
+}
+
 .cardTitle {
   font-size: 13px;
   letter-spacing: 0.06em;
@@ -171,5 +178,9 @@ input:focus {
   }
   .logs {
     grid-column: auto;
+  }
+  .leftSticky {
+    position: static;
+    top: auto;
   }
 }
